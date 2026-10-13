@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bé Tập Đánh Vần Tiếng Anh</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: "Comic Sans MS", "Chalkboard SE", "Trebuchet MS", system-ui, sans-serif;
+    background: linear-gradient(180deg, #FFF6E5 0%, #EAF6FF 100%);
+    color: #4a3f35;
+    min-height: 100vh;
+    display: flex; justify-content: center;
+  }
+  .app { width: 100%; max-width: 720px; }
+  h1 { text-align: center; font-size: 30px; margin: 6px 0 2px; }
+  .sub { text-align: center; color: #8a7a68; font-size: 14px; margin-bottom: 10px; }
+  .hud { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-bottom: 12px; }
+  .pill {
+    background: #fff; border-radius: 999px; padding: 6px 14px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08); font-size: 15px;
+  }
+  .pill.ghost { cursor: pointer; border: 2px solid transparent; font-family: inherit; color: #4a3f35; }
+  .pill.ghost:hover { border-color: #FFB84C; }
+  .progress { height: 12px; background: rgba(255,255,255,.8); border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.08); }
+  .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD166, #06D6A0); transition: width .35s ease; }
+  .card {
+    background: #fff; border-radius: 26px; padding: 22px 20px 26px;
+    text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.09); margin-top: 14px;
+  }
+  .emoji { font-size: 90px; line-height: 1.1; animation: pop .35s ease; }
+  .letters { display: flex; gap: 8px; justify-content: center; margin: 16px 0 6px; flex-wrap: wrap; }
+  .letter {
+    width: 52px; height: 60px; border-radius: 14px;
+    background: #FFF3D6; border: 3px solid #FFD166;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 34px; font-weight: 700; color: #5a4a3a;
+  }
+  .letter.blank { background: #fff; border-color: #FF8C42; position: relative; }
+  .letter.blank::after { content: "?"; color: #FF8C42; animation: pulse 1.1s infinite; }
+  .letter.blank.filled {
+    background: #D8F5E3; border-color: #06D6A0; color: #0b7a53;
+    animation: pop .3s ease;
+  }
+  .letter.blank.filled::after { content: none; }
+  .letter.shake { animation: shake .4s; }
+  .letter.wrongflash { background: #FFE3E3; border-color: #FF6B6B; }
+  .meaning { margin-top: 6px; font-size: 16px; color: #7a6a58; min-height: 24px; }
+  .feedback { font-size: 20px; font-weight: 700; margin-top: 6px; min-height: 30px; }
+  .actions { margin-top: 10px; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+  .btn {
+    font-family: inherit; font-size: 16px; font-weight: 700; cursor: pointer;
+    border: none; border-radius: 999px; padding: 10px 20px;
+    background: #FFD166; color: #6b4d00; box-shadow: 0 3px 0 #e0ac33;
+    transition: transform .06s ease;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.blue { background: #8ED8F8; color: #0b4a63; box-shadow: 0 3px 0 #63b6dd; }
+  .btn.green { background: #7BE3B8; color: #065f46; box-shadow: 0 3px 0 #4cc295; }
+  .keyboard { display: grid; grid-template-columns: repeat(13, minmax(0, 1fr)); gap: 6px; margin-top: 16px; }
+  .key {
+    aspect-ratio: 1 / 1; border: none; border-radius: 12px;
+    background: #FFE9A8; font-family: inherit; font-size: 17px; font-weight: 700;
+    color: #6b4d00; cursor: pointer; box-shadow: 0 3px 0 #e0c25e;
+    transition: transform .06s ease;
+  }
+  .key:hover:not(:disabled) { transform: translateY(-2px); }
+  .key:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
+  .hidden { display: none !important; }
+  .stars { font-size: 44px; margin: 8px 0; }
+  .roundlist { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
+  .roundlist span { background: #F4F9FF; border-radius: 12px; padding: 6px 10px; font-size: 14px; }
+  .vgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 8px; margin-top: 14px; text-align: center; }
+  .vcell { background: #fff; border-radius: 14px; padding: 8px 4px; box-shadow: 0 2px 6px rgba(0,0,0,.06); }
+  .vcell .e { font-size: 30px; }
+  .vcell .w { font-weight: 700; font-size: 15px; }
+  .vcell .m { color: #8a7a68; font-size: 12px; }
+  .vgroup { margin-top: 18px; font-size: 17px; color: #8a6d3b; font-weight: 700; }
+  .confetti {
+    position: fixed; top: -20px; width: 10px; height: 14px; border-radius: 2px;
+    z-index: 99; pointer-events: none; animation: fall 1.5s ease-in forwards;
+  }
+  @keyframes pop { 0% { transform: scale(.6); } 70% { transform: scale(1.12); } 100% { transform: scale(1); } }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: .3; } }
+  @keyframes shake { 0%,100% { transform: translateX(0); } 25% { transform: translateX(-7px); } 75% { transform: translateX(7px); } }
+  @keyframes fall { to { transform: translateY(110vh) rotate(720deg); opacity: .15; } }
+  @media (max-width: 480px) {
+    .emoji { font-size: 70px; }
+    .letter { width: 44px; height: 52px; font-size: 28px; }
+    h1 { font-size: 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <h1>🎈 Bé Tập Đánh Vần 🎈</h1>
+  <div class="sub">Nhìn hình, điền chữ cái còn thiếu vào từ tiếng Anh</div>
+  <div class="hud">
+    <div class="pill" id="pillProgress">Câu 1 / 10</div>
+    <div class="pill" id="pillScore">⭐ Điểm: 0</div>
+    <div class="pill ghost" id="vocabBtn">📖 Ôn từ vựng</div>
+  </div>
+  <div class="progress"><div class="bar" id="bar"></div></div>
+
+  <main class="card" id="gameCard">
+    <div class="emoji" id="emoji">🍎</div>
+    <div class="letters" id="letters"></div>
+    <div class="meaning" id="meaning"></div>
+    <div class="feedback" id="feedback"></div>
+    <div class="actions">
+      <button class="btn blue" id="speakBtn">🔊 Nghe từ</button>
+      <button class="btn" id="hintBtn">💡 Gợi ý</button>
+    </div>
+    <div class="keyboard" id="keyboard"></div>
+  </main>
+
+  <div class="card hidden" id="endCard">
+    <div style="font-size:64px">🏆</div>
+    <h2 style="margin:6px 0">Hoàn thành!</h2>
+    <div class="stars" id="endStars">⭐⭐⭐</div>
+    <div id="endText" style="font-size:18px"></div>
+    <div class="roundlist" id="endList"></div>
+    <div class="actions">
+      <button class="btn green" id="againBtn">🔄 Chơi lại</button>
+      <button class="btn blue" id="vocabBtn2">📖 Ôn từ vựng</button>
+    </div>
+  </div>
+
+  <div class="card hidden" id="vocabCard">
+    <h2 style="margin:4px 0">📖 Từ vựng của bé</h2>
+    <div class="sub" id="vocabCount"></div>
+    <div id="vocabBody"></div>
+    <div class="actions"><button class="btn" id="closeVocab">⬅️ Quay lại chơi</button></div>
+  </div>
+</div>
+
+<script>
+// ===== KHO TỪ VỰNG =====
+const WORDS = [
+  // Đồ ăn
+  {w:"apple",   e:"🍎", m:"quả táo",       g:"food"},
+  {w:"banana",  e:"🍌", m:"quả chuối",     g:"food"},
+  {w:"orange",  e:"🍊", m:"quả cam",       g:"food"},
+  {w:"grape",   e:"🍇", m:"chùm nho",      g:"food"},
+  {w:"egg",     e:"🥚", m:"quả trứng",     g:"food"},
+  {w:"milk",    e:"🥛", m:"sữa",           g:"food"},
+  {w:"cake",    e:"🍰", m:"bánh",          g:"food"},
+  {w:"bread",   e:"🍞", m:"bánh mì",       g:"food"},
+  {w:"rice",    e:"🍚", m:"cơm",           g:"food"},
+  {w:"water",   e:"💧", m:"nước",          g:"food"},
+  {w:"candy",   e:"🍬", m:"kẹo",           g:"food"},
+  {w:"cookie",  e:"🍪", m:"bánh quy",      g:"food"},
+  {w:"cheese",  e:"🧀", m:"phô mai",       g:"food"},
+  // Động vật
+  {w:"cat",     e:"🐱", m:"con mèo",       g:"animal"},
+  {w:"dog",     e:"🐶", m:"con chó",       g:"animal"},
+  {w:"bird",    e:"🐦", m:"con chim",      g:"animal"},
+  {w:"fish",    e:"🐟", m:"con cá",        g:"animal"},
+  {w:"duck",    e:"🦆", m:"con vịt",       g:"animal"},
+  {w:"cow",     e:"🐮", m:"con bò",        g:"animal"},
+  {w:"pig",     e:"🐷", m:"con heo",       g:"animal"},
+  {w:"hen",     e:"🐔", m:"con gà",        g:"animal"},
+  {w:"frog",    e:"🐸", m:"con ếch",       g:"animal"},
+  {w:"bear",    e:"🐻", m:"con gấu",       g:"animal"},
+  {w:"lion",    e:"🦁", m:"sư tử",         g:"animal"},
+  {w:"tiger",   e:"🐯", m:"con hổ",        g:"animal"},
+  {w:"monkey",  e:"🐵", m:"con khỉ",       g:"animal"},
+  {w:"elephant",e:"🐘", m:"con voi",       g:"animal"},
+  {w:"mouse",   e:"🐭", m:"con chuột",     g:"animal"},
+  {w:"rabbit",  e:"🐰", m:"con thỏ",       g:"animal"},
+  {w:"sheep",   e:"🐑", m:"con cừu",       g:"animal"},
+  {w:"horse",   e:"🐴", m:"con ngựa",      g:"animal"},
+  {w:"ant",     e:"🐜", m:"con kiến",      g:"animal"},
+  {w:"bee",     e:"🐝", m:"con ong",       g:"animal"},
+  {w:"snail",   e:"🐌", m:"con ốc sên",    g:"animal"},
+  {w:"snake",   e:"🐍", m:"con rắn",       g:"animal"},
+  {w:"turtle",  e:"🐢", m:"con rùa",       g:"animal"},
+  {w:"whale",   e:"🐳", m:"cá voi",        g:"animal"},
+  {w:"panda",   e:"🐼", m:"gấu trúc",      g:"animal"},
+  // Gia đình & nghề nghiệp
+  {w:"baby",    e:"👶", m:"em bé",         g:"family"},
+  {w:"boy",     e:"👦", m:"bé trai",       g:"family"},
+  {w:"girl",    e:"👧", m:"bé gái",        g:"family"},
+  {w:"mom",     e:"👩", m:"mẹ",            g:"family"},
+  {w:"dad",     e:"👨", m:"bố",            g:"family"},
+  {w:"family",  e:"👪", m:"gia đình",      g:"family"},
+  {w:"teacher", e:"👩‍🏫", m:"cô giáo",   g:"family"},
+  {w:"doctor",  e:"👨‍⚕️", m:"bác sĩ",   g:"family"},
+  // Cơ thể
+  {w:"eye",     e:"👁️", m:"mắt",          g:"body"},
+  {w:"ear",     e:"👂", m:"tai",           g:"body"},
+  {w:"nose",    e:"👃", m:"mũi",           g:"body"},
+  {w:"mouth",   e:"👄", m:"miệng",         g:"body"},
+  {w:"hand",    e:"✋", m:"bàn tay",        g:"body"},
+  {w:"foot",    e:"🦶", m:"bàn chân",      g:"body"},
+  {w:"head",    e:"🧠", m:"cái đầu",       g:"body"},
+  // Đồ dùng học tập
+  {w:"book",    e:"📖", m:"quyển sách",    g:"school"},
+  {w:"pen",     e:"🖊️", m:"cây bút",      g:"school"},
+  {w:"pencil",  e:"✏️", m:"bút chì",      g:"school"},
+  {w:"ruler",   e:"📏", m:"thước kẻ",      g:"school"},
+  {w:"bag",     e:"🎒", m:"cặp sách",      g:"school"},
+  {w:"school",  e:"🏫", m:"trường học",    g:"school"},
+  {w:"chair",   e:"🪑", m:"cái ghế",       g:"school"},
+  {w:"clock",   e:"⏰", m:"đồng hồ",       g:"school"},
+  // Trong nhà
+  {w:"house",   e:"🏠", m:"ngôi nhà",      g:"home"},
+  {w:"door",    e:"🚪", m:"cánh cửa",      g:"home"},
+  {w:"bed",     e:"🛏️", m:"cái giường",   g:"home"},
+  {w:"window",  e:"🪟", m:"cửa sổ",       g:"home"},
+  {w:"lamp",    e:"💡", m:"cái đèn",       g:"home"},
+  {w:"key",     e:"🔑", m:"chìa khóa",     g:"home"},
+  {w:"cup",     e:"☕", m:"cái tách",      g:"home"},
+  {w:"bowl",    e:"🥣", m:"cái bát",       g:"home"},
+  {w:"spoon",   e:"🥄", m:"cái thìa",      g:"home"},
+  {w:"phone",   e:"📱", m:"điện thoại",    g:"home"},
+  {w:"TV",      e:"📺", m:"cái tivi",      g:"home"},
+  {w:"sofa",    e:"🛋️", m:"cái sofa",     g:"home"},
+  // Thiên nhiên
+  {w:"sun",     e:"☀️", m:"mặt trời",     g:"nature"},
+  {w:"moon",    e:"🌙", m:"mặt trăng",     g:"nature"},
+  {w:"star",    e:"⭐", m:"ngôi sao",      g:"nature"},
+  {w:"tree",    e:"🌳", m:"cái cây",       g:"nature"},
+  {w:"flower",  e:"🌸", m:"bông hoa",      g:"nature"},
+  {w:"leaf",    e:"🍃", m:"chiếc lá",      g:"nature"},
+  {w:"rain",    e:"🌧️", m:"cơn mưa",     g:"nature"},
+  {w:"snow",    e:"❄️", m:"tuyết",        g:"nature"},
+  {w:"cloud",   e:"☁️", m:"đám mây",      g:"nature"},
+  {w:"fire",    e:"🔥", m:"ngọn lửa",      g:"nature"},
+  {w:"mountain",e:"⛰️", m:"ngọn núi",     g:"nature"},
+  {w:"sea",     e:"🌊", m:"biển cả",       g:"nature"},
+  {w:"rainbow", e:"🌈", m:"cầu vồng",      g:"nature"},
+  // Phương tiện
+  {w:"car",     e:"🚗", m:"ô tô",          g:"transport"},
+  {w:"bus",     e:"🚌", m:"xe buýt",       g:"transport"},
+  {w:"train",   e:"🚂", m:"tàu hỏa",       g:"transport"},
+  {w:"plane",   e:"✈️", m:"máy bay",      g:"transport"},
+  {w:"bike",    e:"🚲", m:"xe đạp",        g:"transport"},
+  {w:"boat",    e:"⛵", m:"con thuyền",    g:"transport"},
+  {w:"truck",   e:"🚚", m:"xe tải",        g:"transport"},
+  {w:"rocket",  e:"🚀", m:"tên lửa",       g:"transport"},
+  // Quần áo
+  {w:"hat",     e:"👒", m:"cái mũ",        g:"clothes"},
+  {w:"shoe",    e:"👟", m:"đôi giày",      g:"clothes"},
+  {w:"sock",    e:"🧦", m:"đôi tất",       g:"clothes"},
+  {w:"shirt",   e:"👕", m:"cái áo",        g:"clothes"},
+  {w:"dress",   e:"👗", m:"chiếc váy",     g:"clothes"},
+  // Màu sắc
+  {w:"red",     e:"🔴", m:"màu đỏ",        g:"color"},
+  {w:"blue",    e:"🔵", m:"màu xanh dương",g:"color"},
+  {w:"green",   e:"🟢", m:"màu xanh lá",  g:"color"},
+  {w:"yellow",  e:"🟡", m:"màu vàng",     g:"color"},
+  // Đồ chơi
+  {w:"ball",    e:"⚽", m:"quả bóng",      g:"toy"},
+  {w:"kite",    e:"🪁", m:"cái diều",      g:"toy"},
+  {w:"guitar",  e:"🎸", m:"đàn guitar",    g:"toy"},
+  {w:"piano",   e:"🎹", m:"đàn piano",     g:"toy"},
+  {w:"balloon", e:"🎈", m:"bóng bay",      g:"toy"}
+];
+
+const GROUP_NAMES = {
+  food:"🍎 Đồ ăn", animal:"🐰 Động vật", family:"👪 Gia đình & nghề",
+  body:"👁️ Cơ thể", school:"🎒 Đồ dùng học tập", home:"🏠 Trong nhà",
+  nature:"🌈 Thiên nhiên", transport:"🚗 Phương tiện",
+  clothes:"👕 Quần áo", color:"🎨 Màu sắc", toy:"🎈 Đồ chơi"
+};
+
+const PRAISE = ["Giỏi quá! 🎉", "Tuyệt vời! 🌟", "Đúng rồi! 👏", "Bé thông minh quá! 💖", "Xuất sắc! 🥳"];
+const OOPS   = ["Thử lại nhé 💪", "Gần đúng rồi! 😊", "Bé xem kỹ lại nhé! 🤔", "Đừng nản nhé! 🌈"];
+
+const ROUND_SIZE = 10;
+const MAX_TRIES = 3;
+
+let queue = [], idx = 0, score = 0, mistakes = 0, triesThisQ = 0, hiddenIdx = 0, locked = false, roundResults = [];
+
+const $ = id => document.getElementById(id);
+const els = {
+  pillProgress: $("pillProgress"), pillScore: $("pillScore"), bar: $("bar"),
+  gameCard: $("gameCard"), endCard: $("endCard"), vocabCard: $("vocabCard"),
+  emoji: $("emoji"), letters: $("letters"), meaning: $("meaning"),
+  feedback: $("feedback"), keyboard: $("keyboard"),
+  endStars: $("endStars"), endText: $("endText"), endList: $("endList"),
+  vocabBody: $("vocabBody"), vocabCount: $("vocabCount")
+};
+
+// ===== ÂM THANH =====
+let actx = null;
+function tone(freq, dur, type, delay) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime + (delay || 0);
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.type = type || "sine"; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.15, t0);
+    g.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + dur + 0.05);
+  } catch (e) {}
+}
+const sndCorrect = () => { tone(523,.15); tone(659,.15,"sine",.12); tone(784,.28,"sine",.24); };
+const sndWrong   = () => { tone(196,.22,"square"); tone(147,.3,"square",.14); };
+const sndWin     = () => { [523,659,784,1047].forEach((f,i)=>tone(f,.25,"sine",i*.13)); };
+
+function speak(text) {
+  try {
+    if (!window.speechSynthesis) return;
+    const u = new SpeechSynthesisUtterance(text);
+    u.lang = "en-US"; u.rate = 0.8;
+    speechSynthesis.cancel(); speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+function confetti() {
+  const colors = ["#FFD166","#06D6A0","#EF476F","#118AB2","#8ED8F8","#FF8C42"];
+  for (let i = 0; i < 44; i++) {
+    const d = document.createElement("div");
+    d.className = "confetti";
+    d.style.left = Math.random() * 100 + "vw";
+    d.style.background = colors[Math.floor(Math.random() * colors.length)];
+    d.style.animationDelay = (Math.random() * 0.35) + "s";
+    d.style.animationDuration = (1.1 + Math.random() * 0.6) + "s";
+    document.body.appendChild(d);
+    setTimeout(() => d.remove(), 2200);
+  }
+}
+
+// ===== GAME =====
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function startRound() {
+  queue = shuffle(WORDS).slice(0, ROUND_SIZE);
+  idx = 0; score = 0; mistakes = 0; roundResults = [];
+  els.endCard.classList.add("hidden");
+  els.gameCard.classList.remove("hidden");
+  buildKeyboard();
+  renderQuestion();
+  updateHud();
+}
+
+function updateHud() {
+  els.pillProgress.textContent = "Câu " + Math.min(idx + 1, ROUND_SIZE) + " / " + ROUND_SIZE;
+  els.pillScore.textContent = "⭐ Điểm: " + score;
+  els.bar.style.width = (idx / ROUND_SIZE * 100) + "%";
+}
+
+function buildKeyboard() {
+  els.keyboard.innerHTML = "";
+  "abcdefghijklmnopqrstuvwxyz".split("").forEach(ch => {
+    const b = document.createElement("button");
+    b.className = "key"; b.textContent = ch; b.dataset.ch = ch;
+    b.addEventListener("click", () => guess(ch));
+    els.keyboard.appendChild(b);
+  });
+}
+
+function renderQuestion() {
+  const q = queue[idx];
+  hiddenIdx = pickHidden(q.w);
+  triesThisQ = 0; locked = false;
+  els.emoji.textContent = q.e;
+  els.meaning.textContent = "";
+  els.feedback.textContent = "";
+  els.letters.innerHTML = "";
+  q.w.split("").forEach((ch, i) => {
+    const d = document.createElement("div");
+    d.className = "letter" + (i === hiddenIdx ? " blank" : "");
+    if (i !== hiddenIdx) d.textContent = ch;
+    d.id = "box" + i;
+    els.letters.appendChild(d);
+  });
+  els.keyboard.querySelectorAll(".key").forEach(k => k.disabled = false);
+  updateHud();
+}
+
+function pickHidden(word) {
+  const len = word.length;
+  if (len <= 3) return Math.floor(Math.random() * len);
+  return 1 + Math.floor(Math.random() * (len - 2)); // chữ cái ở giữa
+}
+
+function guess(ch) {
+  if (locked) return;
+  if (els.gameCard.classList.contains("hidden")) return; // đang ở màn tổng kết / từ vựng
+  const q = queue[idx];
+  if (ch === q.w[hiddenIdx]) {
+    locked = true;
+    const box = $("box" + hiddenIdx);
+    box.classList.add("filled");
+    box.textContent = ch;
+    els.keyboard.querySelectorAll(".key").forEach(k => k.disabled = true);
+    els.meaning.textContent = q.w + " = " + q.m + " " + q.e;
+    els.feedback.textContent = PRAISE[Math.floor(Math.random() * PRAISE.length)];
+    els.feedback.style.color = "#0b7a53";
+    if (triesThisQ === 0) score++;
+    roundResults.push({ q: q, firstTry: triesThisQ === 0 });
+    mistakes += triesThisQ;
+    confetti(); sndCorrect(); speak(q.w);
+    setTimeout(nextQuestion, 1700);
+  } else {
+    triesThisQ++;
+    const btn = els.keyboard.querySelector('.key[data-ch="' + ch + '"]');
+    if (btn) btn.disabled = true;
+    const box = $("box" + hiddenIdx);
+    box.classList.add("shake", "wrongflash");
+    setTimeout(() => box.classList.remove("shake", "wrongflash"), 450);
+    els.feedback.textContent = OOPS[Math.floor(Math.random() * OOPS.length)];
+    els.feedback.style.color = "#c0392b";
+    sndWrong();
+    if (triesThisQ >= MAX_TRIES) {
+      locked = true;
+      box.classList.add("filled");
+      box.textContent = q.w[hiddenIdx];
+      els.meaning.textContent = q.w + " = " + q.m + " " + q.e;
+      els.feedback.textContent = "Đáp án: " + q.w + " nhé! 😊";
+      roundResults.push({ q: q, firstTry: false });
+      speak(q.w);
+      setTimeout(nextQuestion, 2400);
+    }
+  }
+}
+
+function nextQuestion() {
+  idx++;
+  if (idx >= ROUND_SIZE) endRound();
+  else renderQuestion();
+}
+
+function endRound() {
+  els.gameCard.classList.add("hidden");
+  els.endCard.classList.remove("hidden");
+  updateHud();
+  const firstTryCount = roundResults.filter(r => r.firstTry).length;
+  let stars = 1;
+  if (mistakes === 0) stars = 3;
+  else if (mistakes <= 4) stars = 2;
+  els.endStars.textContent = "⭐".repeat(stars) + "✩".repeat(3 - stars);
+  els.endText.textContent = "Bé đúng ngay " + firstTryCount + "/" + ROUND_SIZE + " từ! (sai " + mistakes + " lần)";
+  els.endList.innerHTML = roundResults
+    .map(r => "<span>" + r.q.e + " " + r.q.w + "</span>")
+    .join("");
+  sndWin();
+  confetti();
+}
+
+// ===== GỢI Ý =====
+$("hintBtn").addEventListener("click", () => {
+  if (locked) return;
+  const q = queue[idx];
+  const pos = ["đầu tiên", "thứ hai", "thứ ba", "thứ tư", "thứ năm", "thứ sáu", "thứ bảy"];
+  els.feedback.textContent = "Chữ cần điền là chữ " + pos[hiddenIdx] + " trong từ, bé nghe thử nhé! 🔔";
+  els.feedback.style.color = "#8a6d3b";
+  speak(q.w);
+});
+
+$("speakBtn").addEventListener("click", () => speak(queue[idx].w));
+
+// ===== TỪ VỰNG =====
+function buildVocab() {
+  els.vocabCount.textContent = "Tổng cộng " + WORDS.length + " từ cơ bản cho bé lớp 1";
+  const groups = {};
+  WORDS.forEach(item => { (groups[item.g] = groups[item.g] || []).push(item); });
+  let html = "";
+  Object.keys(GROUP_NAMES).forEach(g => {
+    if (!groups[g]) return;
+    html += '<div class="vgroup">' + GROUP_NAMES[g] + " (" + groups[g].length + ")</div>";
+    html += '<div class="vgrid">' + groups[g]
+      .map(it => '<div class="vcell"><div class="e">' + it.e + '</div><div class="w">' + it.w + '</div><div class="m">' + it.m + "</div></div>")
+      .join("") + "</div>";
+  });
+  els.vocabBody.innerHTML = html;
+}
+
+function showVocab() {
+  els.gameCard.classList.add("hidden");
+  els.endCard.classList.add("hidden");
+  els.vocabCard.classList.remove("hidden");
+  buildVocab();
+}
+function hideVocab() {
+  els.vocabCard.classList.add("hidden");
+  els.gameCard.classList.remove("hidden");
+}
+
+$("vocabBtn").addEventListener("click", showVocab);
+$("vocabBtn2").addEventListener("click", showVocab);
+$("closeVocab").addEventListener("click", hideVocab);
+$("againBtn").addEventListener("click", startRound);
+
+// Bàn phím máy tính
+document.addEventListener("keydown", e => {
+  const ch = (e.key || "").toLowerCase();
+  if (/^[a-z]$/.test(ch)) guess(ch);
+});
+
+startRound();
+</script>
+</body>
+</html>
