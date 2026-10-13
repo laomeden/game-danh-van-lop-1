@@ -89,6 +89,21 @@
   .key:hover:not(:disabled) { transform: translateY(-2px); }
   .key:disabled { opacity: .3; cursor: not-allowed; box-shadow: none; }
 
+  /* ===== O NHAP BANG BAN PHIM THIET BI (game dien tu) ===== */
+  .kbWrap { margin-top: 16px; }
+  .kbInput {
+    width: 100%; max-width: 320px; margin: 0 auto; display: block;
+    font-family: inherit; font-size: 30px; font-weight: 700; text-align: center;
+    letter-spacing: 6px; color: #6b4d00;
+    background: #FFFDF5; border: 4px solid #FFD166; border-radius: 18px;
+    padding: 12px 14px; outline: none; caret-color: #FF8C42;
+    box-shadow: 0 4px 0 #e0c25e; transition: border-color .15s, box-shadow .15s;
+  }
+  .kbInput:focus { border-color: #FF8C42; box-shadow: 0 0 0 4px #FFE9A8, 0 4px 0 #e0c25e; }
+  .kbInput.good { border-color: #06D6A0; box-shadow: 0 0 0 4px #D8F5E3, 0 4px 0 #4cc295; }
+  .kbInput.bad  { border-color: #FF6B6B; animation: shake .4s; }
+  .kbHint { text-align: center; font-size: 14px; color: #8a7a68; margin-top: 8px; }
+
   /* ===== 4 LUA CHON (nghe / chon tu) ===== */
   .optRow { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin-top: 14px; }
   @media (min-width: 560px) { .optRow { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
@@ -284,8 +299,8 @@
 
   <!-- ============ 7. NOI CHUYEN VOI AI ============ -->
   <section id="screen-chat" class="screen hidden card">
-    <div class="gameHead"><button class="btn blue homeBack">🏠</button><span class="gtitle">💬 Nói chuyện tiếng Anh với Bạn AI</span></div>
-    <div class="gdesc">Bé trò chuyện tiếng Anh với bạn AI. Bé có thể gõ chữ hoặc bấm micro để nói!</div>
+    <div class="gameHead"><button class="btn blue homeBack">🏠</button><span class="gtitle">💬 Nói chuyện tiếng Anh với Cô Lily</span></div>
+    <div class="gdesc">Bé trò chuyện tiếng Anh với cô Lily. Bé có thể gõ chữ hoặc bấm micro để nói!</div>
     <div class="hud"><div class="pill gProg"></div><div class="pill gScore"></div></div>
     <div class="gameBody"></div>
   </section>
@@ -444,13 +459,13 @@ const GROUP_NAMES = {
 };
 
 const GAMES_META = [
-  {id:"spell",  e:"🐝", t:"Điền chữ còn thiếu", d:"Nhìn hình, điền chữ còn thiếu vào từ"},
+  {id:"spell",  e:"🐝", t:"Điền chữ còn thiếu", d:"Nhìn hình, gõ chữ còn thiếu bằng bàn phím"},
   {id:"listen", e:"🔊", t:"Nghe và chọn hình",   d:"Nghe từ rồi chọn đúng hình"},
   {id:"choose", e:"🖼️", t:"Nhìn hình chọn từ",  d:"Chọn từ tiếng Anh đúng cho hình"},
   {id:"memory", e:"🃏", t:"Lật thẻ tìm cặp",     d:"Tìm cặp hình và từ giống nhau"},
   {id:"robot",  e:"🤖", t:"Robot đoán chữ",      d:"Đoán cả từ bằng từng chữ cái"},
   {id:"match",  e:"🧩", t:"Kéo từ vào hình",     d:"Kéo hoặc chạm từ khớp với hình"},
-  {id:"chat",   e:"💬", t:"Nói chuyện với AI",   d:"Trò chuyện tiếng Anh với bạn AI"}
+  {id:"chat",   e:"💬", t:"Nói chuyện với Cô Lily", d:"Trò chuyện tiếng Anh với cô giáo"}
 ];
 
 const PRAISE = ["Giỏi quá! 🎉", "Tuyệt vời! 🌟", "Đúng rồi! 👏", "Bé thông minh quá! 💖", "Xuất sắc! 🥳"];
@@ -508,11 +523,62 @@ const sndCorrect = () => { tone(523,.15); tone(659,.15,"sine",.12); tone(784,.28
 const sndWrong   = () => { tone(196,.22,"square"); tone(147,.3,"square",.14); };
 const sndWin     = () => { [523,659,784,1047].forEach((f,i)=>tone(f,.25,"sine",i*.13)); };
 
+// Chon giong NU tieng Anh (co giao) thay vi giong mac dinh cua may
+let _femaleVoice = null, _voiceReady = false;
+function femaleVoice() {
+  try {
+    if (!window.speechSynthesis) return null;
+    const vs = speechSynthesis.getVoices() || [];
+    if (!vs.length) return null;
+    if (_femaleVoice && vs.indexOf(_femaleVoice) !== -1) return _femaleVoice;
+    const en = vs.filter(v => /^en/i.test(v.lang || ""));
+    if (!en.length) return null;
+    // Uu tien tieng Anh - My, roi Anh - Anh, roi cac nuoc khac
+    const rank = v => (/^en[-_]us/i.test(v.lang) ? 0 : /^en[-_]gb/i.test(v.lang) ? 1 : 2);
+    en.sort((a, b) => rank(a) - rank(b));
+    const MALE = /(david|mark|william|liam|ryan|thomas|george|daniel|fred|alex|guy|male|tom|oliver|james|eric|christopher|brian|connor|andrew|roger|steffan|sam|prabhat|abeo|chilemba)/i;
+    const NATURAL = /(natural|online|neural|premium)/i;
+    // Giong nu am ap, doc tu nhien — ten pho bien tren Windows / macOS / Android
+    const PREFER = ["aria", "jenny", "ava", "emma", "michelle", "ana", "zira", "sonia", "libby",
+                    "maisie", "natasha", "clara", "neerja", "emily", "samantha", "karen", "moira",
+                    "tessa", "fiona", "serena", "victoria", "susan", "linda", "heather", "catherine"];
+    const FEMALE = new RegExp("(" + PREFER.join("|") + "|female|woman)", "i");
+    let pick = null;
+    // 1. giong nu ten quen + chat luong tu nhien (nghe hay nhat cho be)
+    for (const name of PREFER) {
+      pick = en.find(v => (v.name || "").toLowerCase().indexOf(name) !== -1 && NATURAL.test(v.name || ""));
+      if (pick) break;
+    }
+    // 2. giong nu ten quen (bat ky chat luong)
+    if (!pick) for (const name of PREFER) {
+      pick = en.find(v => (v.name || "").toLowerCase().indexOf(name) !== -1);
+      if (pick) break;
+    }
+    // 3. giong nu khac + tu nhien
+    if (!pick) pick = en.find(v => FEMALE.test(v.name || "") && NATURAL.test(v.name || ""));
+    // 4. khong phai giong nam
+    if (!pick) pick = en.find(v => !MALE.test(v.name || ""));
+    // 5. bat ky giong tieng Anh nao
+    if (!pick) pick = en[0];
+    _femaleVoice = pick;
+    return _femaleVoice;
+  } catch (e) { return null; }
+}
+if (window.speechSynthesis) {
+  // getVoices() lan dau co the rong -> goi truoc va lam moi khi danh sach san sang
+  try { speechSynthesis.getVoices(); } catch (e) {}
+  try {
+    speechSynthesis.onvoiceschanged = () => { _femaleVoice = null; _voiceReady = true; };
+  } catch (e) {}
+}
+
 function speak(text) {
   try {
     if (!window.speechSynthesis) return;
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "en-US"; u.rate = 0.8;
+    u.lang = "en-US"; u.rate = 0.8; u.pitch = 1.15;   // pitch cao hon = giong nu am hon
+    const v = femaleVoice();
+    if (v) { u.voice = v; u.lang = v.lang || "en-US"; }
     speechSynthesis.cancel(); speechSynthesis.speak(u);
   } catch (e) {}
 }
@@ -598,18 +664,52 @@ GAMES.spell = {
       speak(queue[i].w);
     });
     actions.appendChild(speakBtn); actions.appendChild(hintBtn);
-    const keyboard = el("div", "keyboard");
-    "abcdefghijklmnopqrstuvwxyz".split("").forEach(c => {
-      const b = el("button", "key", c);
-      b.dataset.ch = c;
-      b.addEventListener("click", () => guess(c));
-      keyboard.appendChild(b);
+    // Ban phim THIET BI: o nhap that -> dien thoai/may tinh tu hien ban phim cua no
+    const kbWrap = el("div", "kbWrap");
+    const kbInput = el("input", "kbInput");
+    kbInput.type = "text";
+    kbInput.id = "spellInput";
+    kbInput.autocomplete = "off";
+    kbInput.setAttribute("autocapitalize", "off");
+    kbInput.setAttribute("autocorrect", "off");
+    kbInput.setAttribute("spellcheck", "false");
+    kbInput.setAttribute("enterkeyhint", "done");
+    kbInput.setAttribute("aria-label", "Go chu con thieu");
+    kbInput.placeholder = "?";
+    kbInput.maxLength = 1;
+    const kbHint = el("div", "kbHint", "Bé gõ chữ cái còn thiếu bằng bàn phím nhé!");
+    kbWrap.appendChild(kbInput); kbWrap.appendChild(kbHint);
+    const tried = new Set();
+    function typeLetter(raw) {
+      const ch = String(raw || "").toLowerCase().replace(/[^a-z]/g, "");
+      if (!ch) return;
+      const c = ch.slice(-1);
+      if (locked || tried.has(c)) { kbInput.value = ""; return; }
+      tried.add(c);
+      kbInput.value = "";
+      guess(c);
+    }
+    kbInput.addEventListener("input", () => typeLetter(kbInput.value));
+    kbInput.addEventListener("keydown", e => {
+      if (e.key === "Enter") { e.preventDefault(); typeLetter(kbInput.value); }
     });
-    [emojiBox, letters, meaning, feedback, actions, keyboard].forEach(n => ctx.body.appendChild(n));
+    [emojiBox, letters, meaning, feedback, actions, kbWrap].forEach(n => ctx.body.appendChild(n));
+
+    function focusInput() {
+      try { kbInput.focus({ preventScroll: true }); } catch (e) { try { kbInput.focus(); } catch (e2) {} }
+    }
+    // Vao game la san sang go ngay
+    setTimeout(focusInput, 60);
+    // Bam vao vung choi -> dua con tro ve o nhap de ban phim luon mo
+    ctx.body.addEventListener("click", e => {
+      if (e.target === kbInput) return;
+      if (e.target.closest && e.target.closest("button")) return;
+      focusInput();
+    });
 
     function render() {
       const q = queue[i];
-      tries = 0; locked = false;
+      tries = 0; locked = false; tried.clear();
       emojiBox.textContent = q.e;
       meaning.textContent = ""; feedback.textContent = "";
       letters.innerHTML = "";
@@ -619,8 +719,11 @@ GAMES.spell = {
         if (k !== hidden) d.textContent = c;
         letters.appendChild(d);
       });
-      Array.prototype.forEach.call(keyboard.querySelectorAll(".key"), k => k.disabled = false);
+      kbInput.value = ""; kbInput.disabled = false;
+      kbInput.classList.remove("good", "bad");
+      kbHint.textContent = "Bé gõ chữ cái còn thiếu bằng bàn phím nhé!";
       hud(ctx, i, ROUND_SIZE, score);
+      focusInput();
     }
     function guess(ch) {
       if (locked) return;
@@ -631,7 +734,8 @@ GAMES.spell = {
         locked = true;
         const box = letters.children[hidden];
         box.classList.add("filled"); box.textContent = target;   // hien dung chu hoa/thuong nhu tu goc
-        Array.prototype.forEach.call(keyboard.querySelectorAll(".key"), k => k.disabled = true);
+        kbInput.classList.add("good");
+        kbInput.disabled = true;
         meaning.textContent = q.w + " = " + q.m + " " + q.e;
         feedback.textContent = pick(PRAISE); feedback.style.color = "#0b7a53";
         if (tries === 0) { score++; firstTry++; }
@@ -641,16 +745,18 @@ GAMES.spell = {
         setTimeout(next, 1700);
       } else {
         tries++;
-        const btn = keyboard.querySelector('.key[data-ch="' + ch + '"]');
-        if (btn) btn.disabled = true;
+        kbInput.classList.add("bad");
+        setTimeout(() => kbInput.classList.remove("bad"), 450);
         const box = letters.children[hidden];
         box.classList.add("shake", "wrongflash");
         setTimeout(() => box.classList.remove("shake", "wrongflash"), 450);
-        feedback.textContent = pick(OOPS); feedback.style.color = "#c0392b";
+        feedback.textContent = pick(OOPS) + " (còn " + (3 - tries) + " lần thử)";
+        feedback.style.color = "#c0392b";
         sndWrong();
         if (tries >= 3) {
           locked = true;
           box.classList.add("filled"); box.textContent = q.w[hidden];
+          kbInput.disabled = true;
           meaning.textContent = q.w + " = " + q.m + " " + q.e;
           feedback.textContent = "Đáp án: " + q.w + " nhé! 😊";
           items.push(q.e + " " + q.w);
@@ -1302,7 +1408,7 @@ GAMES.chat = {
     // --- goi API ---
     function addMsg(text, who, cls) {
       const m = el("div", "msg " + (cls || who));
-      const name = el("span", "who", who === "bot" ? "🤖 Bạn AI" : who === "kid" ? "🧒 Bé" : "");
+      const name = el("span", "who", who === "bot" ? "👩‍🏫 Cô Lily" : who === "kid" ? "🧒 Bé" : "");
       m.appendChild(name);
       const body = el("span");
       body.textContent = text;
@@ -1314,7 +1420,7 @@ GAMES.chat = {
     function addTyping() {
       const m = el("div", "msg bot typing");
       m.id = "chatTyping";
-      m.textContent = "Bạn AI đang nghĩ... 💭";
+      m.textContent = "Cô Lily đang nghĩ... 💭";
       chatBox.appendChild(m);
       chatBox.scrollTop = chatBox.scrollHeight;
     }
@@ -1325,18 +1431,46 @@ GAMES.chat = {
 
     function systemPrompt() {
       const vocabList = WORDS.map(x => x.w).join(", ");
-      return "You are a friendly English tutor chatting with a 6-year-old Vietnamese child who is learning English as a beginner (Grade 1 level). " +
-        "STRICT RULES:\n" +
-        "1. Speak ONLY in very simple English. Use short sentences (max 8 words).\n" +
-        "2. Use ONLY these vocabulary words when possible: " + vocabList + ". Also allowed: I, you, my, your, is, am, are, like, have, can, see, this, that, a, an, the, and, very, too, yes, no, please, thank you, hello, goodbye, what, who, where, how, good, big, small, one, two, three.\n" +
-        "3. ALWAYS reply with EXACTLY this format (3 parts, each on its own line):\n" +
-        "ENGLISH: <your reply in simple English>\n" +
-        "VIETNAMESE: <bản dịch tiếng Việt của câu trả lời>\n" +
-        "QUESTION: <one short easy question back to the child in simple English>\n" +
-        "4. Be warm, cheerful and encouraging. Use emoji.\n" +
-        "5. If the child writes in Vietnamese, gently switch them back to English by replying in English with a very simple example.\n" +
-        "6. Never discuss anything inappropriate for a child. Keep it about family, animals, food, school, colors, toys, nature.\n" +
-        "7. Never use more than 3 sentences total.";
+      return [
+        "You are Ms. Lily, a warm and cheerful English teacher for a 6-year-old Vietnamese child (Grade 1 beginner).",
+        "You are having a REAL conversation with the child, not giving a quiz. Talk like a kind teacher sitting next to them.",
+        "",
+        "HOW TO TALK:",
+        "- FIRST react to what the child just said, so they feel heard. Then add ONE small new thing.",
+        "- Then ask ONE easy question so the child wants to answer again.",
+        "- Never repeat the same sentence or the same question twice. Vary your words every turn.",
+        "- Praise the child every time (Good job! / Well done! / You are great!).",
+        "- If the child makes a mistake, never say wrong. Just say the correct sentence naturally so they hear it right.",
+        "- If the child writes in Vietnamese, answer warmly in English and give them one easy English sentence to copy.",
+        "- Keep the conversation going: follow the child's interest instead of changing the subject.",
+        "",
+        "LANGUAGE:",
+        "- Very simple English only. Max 8 words per sentence, max 2 sentences.",
+        "- Prefer these words: " + vocabList + ".",
+        "- Also fine: I, you, my, your, is, am, are, like, have, can, see, this, that, a, an, the, and, very, too, yes, no, please, thank you, hello, goodbye, what, who, where, how, good, big, small, one, two, three, love, want, play, eat, go, here, now, today.",
+        "",
+        "SAFETY:",
+        "- Only talk about family, animals, food, school, colors, toys, nature and feelings.",
+        "- Never anything scary, violent, romantic or inappropriate for a 6-year-old.",
+        "- Never ask for personal information (address, phone number, school name, photos).",
+        "",
+        "OUTPUT FORMAT - always exactly these 3 lines, nothing before or after:",
+        "ENGLISH: <what Ms. Lily says to the child. A reaction or a statement. NEVER a question here>",
+        "VIETNAMESE: <dịch câu tiếng Anh ở trên sang tiếng Việt>",
+        "QUESTION: <the ONLY question, one short easy question for the child, in English>",
+        "",
+        "EXAMPLE (copy this style exactly):",
+        "child says: I like apples",
+        "ENGLISH: Apples are yummy! I like them too.",
+        "VIETNAMESE: Táo rất ngon! Cô cũng thích táo.",
+        "QUESTION: Do you like red apples?",
+        "",
+        "EXAMPLE 2:",
+        "child says: con thích con mèo",
+        "ENGLISH: Good try! In English we say: I like cats.",
+        "VIETNAMESE: Bé giỏi lắm! Trong tiếng Anh mình nói: I like cats.",
+        "QUESTION: Do you have a cat at home?"
+      ].join("\n");
     }
 
     // Goi cau noi (bridge.py) chay tren may ban -> hermes proxy -> Portal. Khong can API key.
@@ -1397,7 +1531,7 @@ GAMES.chat = {
         removeTyping();
         if (!raw) {
           addMsg(
-            "Bạn AI chưa trả lời được lần này. Bé bấm 🤖 Đổi model chọn model khác (ví dụ Gemma 4 31B) rồi thử lại nhé! 🔄" +
+            "Cô Lily chưa trả lời được lần này. Bé bấm 🤖 Đổi model chọn model khác rồi thử lại nhé! 🔄" +
             (finish ? " (" + finish + ")" : ""),
             "bot"
           );
@@ -1416,7 +1550,7 @@ GAMES.chat = {
         let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
         if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
         else if (s.indexOf("404") !== -1) msg = "Model này đang bận. Bé bấm 🤖 Đổi model chọn model khác nhé! 🔄";
-        else if (s.indexOf("5") === 0) msg = "Bạn AI đang bận một chút. Bé thử lại sau vài giây nhé! ⏳";
+        else if (s.indexOf("5") === 0) msg = "Cô Lily đang bận một chút. Bé thử lại sau vài giây nhé! ⏳";
         addMsg(msg, "bot");
       }
       busy = false;
@@ -1495,10 +1629,10 @@ GAMES.chat = {
       topicRow.appendChild(c);
     });
 
-    // --- loi chao dau ---
-    const greet = "Hello! I am your friend. What is your name?";
+    // --- loi chao dau (Cô Lily) ---
+    const greet = "Hello! I am Ms. Lily. I am your English teacher. What is your name?";
     addMsg(greet, "bot");
-    history.push({ role: "assistant", content: "ENGLISH: " + greet + "\nVIETNAMESE: Xin chào! Mình là bạn của bé. Tên bé là gì?\nQUESTION: What is your name?" });
+    history.push({ role: "assistant", content: "ENGLISH: Hello! I am Ms. Lily. I am your English teacher.\nVIETNAMESE: Xin chào! Cô là cô Lily, giáo viên tiếng Anh của bé.\nQUESTION: What is your name?" });
     speak(greet);
   }
 };
@@ -1554,9 +1688,17 @@ viLoad();
 document.addEventListener("keydown", e => {
   const ch = (e.key || "").toLowerCase();
   if (!/^[a-z]$/.test(ch)) return;
-  if (currentGame !== "spell" && currentGame !== "robot") return;
   const s = document.getElementById("screen-" + currentGame);
-  if (s.classList.contains("hidden")) return;
+  if (!s || s.classList.contains("hidden")) return;
+  if (currentGame === "spell") {
+    // Game dien tu dung o nhap that -> chi can dam bao o nhap dang duoc chon
+    const inp = document.getElementById("spellInput");
+    if (inp && !inp.disabled && typeof inp.focus === "function") {
+      try { inp.focus({ preventScroll: true }); } catch (err) { try { inp.focus(); } catch (e2) {} }
+    }
+    return;
+  }
+  if (currentGame !== "robot") return;
   const body = s.querySelector(".gameBody");
   const btn = body.querySelector('.key[data-ch="' + ch + '"]');
   if (btn && !btn.disabled) btn.click();
