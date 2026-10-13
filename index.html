@@ -915,6 +915,8 @@ GAMES.robot = {
     let wrong = 0, done = false;
 
     const stage = el("div", "stage");
+    const emojiBox = el("div", "emoji");
+    emojiBox.textContent = q.e;
     const robotWrap = el("div", "robotWrap");
     // Robot vui: moi cau sai lap them 1 bo phan (khong dung hinh treo co kinh di)
     robotWrap.innerHTML =
@@ -939,7 +941,7 @@ GAMES.robot = {
     const actions = el("div", "actions");
     actions.appendChild(hintBtn); actions.appendChild(againBtn);
     const keyboard = el("div", "keyboard");
-    [robotWrap, letters, feedback, meaning, actions, keyboard].forEach(n => stage.appendChild(n));
+    [emojiBox, robotWrap, letters, feedback, meaning, actions, keyboard].forEach(n => stage.appendChild(n));
     ctx.body.appendChild(stage);
 
     againBtn.addEventListener("click", () => GAMES.robot.start());
@@ -1138,20 +1140,15 @@ GAMES.match = {
 };
 
 /* ---------- 7. Nói chuyện với AI ---------- */
-// ===== KEY VA MODEL MAC DINH (nhung san -> be khong can nhap gi) =====
-// LUU Y: file nay dang public tren GitHub Pages nen bat ky ai cung xem duoc key ben duoi.
-// Key co gioi han $1/thang (workspace) va chi dung duoc model :free nen rui ro tai chinh toi da ~$1.
-// Neu muon thu key lai: vao openrouter.ai/keys -> xoa key nay -> tao key moi -> sua dong duoi.
-const CHAT_API_KEY = "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";
-// Danh sach model FREE cua OpenRouter phu hop cho be lop 1 (chat don gian)
+// ===== CHE DO HERMES: app goi cau noi (bridge.py) chay tren may ban =====
+// Khong can API key. Cau noi chuyen tiep den 'hermes proxy' -> dung subscription Portal cua ban.
+// De bat: chay file "Bat-Hermes.bat" (noi cung thu muc) truoc khi be vao tro choi.
+const BRIDGE_URL = "http://127.0.0.1:8646/chat";
+// Danh sach model FREE qua Portal — chi gom model da kiem tra tra loi dung format
 const CHAT_MODELS = [
-  {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định"},
-  {id:"nvidia/nemotron-3.5-lightning:free",                n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"},
-  {id:"nvidia/nemotron-3-super-120b-a12b:free",            n:"Nemotron 3 Super (NVIDIA)", d:"Khỏe hơn, câu hay hơn"},
-  {id:"google/gemma-4-31b-it:free",                        n:"Gemma 4 31B (Google)", d:"Nói tự nhiên, thân thiện"},
-  {id:"google/gemma-4-26b-a4b-it:free",                    n:"Gemma 4 26B (Google)", d:"Nhẹ hơn Gemma 31B"},
-  {id:"liquid/lfm-2.5-2.6b:free",                          n:"LFM2.5-2.6B (LiquidAI)", d:"Nhỏ nhất, phù hợp máy yếu"},
-  {id:"apodex/apodex-1.1-mini:free",                       n:"Apodex 1.1 Mini", d:"Nhẹ, ổn định"}
+  {id:"upstage/solar-mini4:free",            n:"Solar Mini 4 (Upstage)",   d:"Nhẹ, nhanh — mặc định"},
+  {id:"poolside/laguna-s-2.1:free",          n:"Laguna S 2.1 (Poolside)",  d:"Vui vẻ, hợp với bé"},
+  {id:"meituan/longcat-2.5-preview:free",    n:"LongCat 2.5 (Meituan)",    d:"Câu dài, hay kể chuyện"}
 ];
 const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
 let chatModel = CHAT_DEFAULT_MODEL;
@@ -1181,20 +1178,6 @@ const CHAT_TOPICS = [
   {en:"Goodbye!", vi:"Tạm biệt!"},
   {en:"I am hungry.", vi:"Mình đói rồi."}
 ];
-let chatKey = CHAT_API_KEY;   // da nhung san -> be khong can nhap key
-function chatLoadKey() {
-  // Neu nguoi dung tu nhap key rieng (qua man huong dan cu) thi uu tien key do
-  try {
-    const v = window.localStorage ? localStorage.getItem("behoc_openrouter_key") : null;
-    if (v && v.trim()) chatKey = v.trim();
-  } catch (e) {}
-  if (!chatKey) chatKey = CHAT_API_KEY;
-  return chatKey;
-}
-function chatSaveKey(k) {
-  chatKey = k;
-  try { if (window.localStorage) localStorage.setItem("behoc_openrouter_key", k); } catch (e) {}
-}
 const VI_ON_KEY = "behoc_show_vi";
 let showVi = false;
 function viLoad() {
@@ -1216,44 +1199,30 @@ GAMES.chat = {
   start: function () {
     const ctx = gameCtx("chat");
     ctx.body.innerHTML = "";
-    chatLoadKey();
     chatLoadModel();
-    // Da co key nhung san -> vao thang man tro chuyen, be khong can lam gi
+    // Che do Hermes: khong can key. Neu cau noi chua bat, lan goi dau se tu hien huong dan.
     this.renderChat(ctx);
   },
 
-  // Du phong: chi hien khi key nhung san bi loi (het han / het luot).
-  // Nguoi lon co the dan key rieng cua minh vao day.
+  // Hien khi cau noi Hermes chua bat. Khong can API key — chi can bat Hermes.
   renderSetup: function (ctx) {
     const wrap = el("div", "chatWrap");
     const box = el("div", "setupBox");
     box.innerHTML =
-      "<b>💬 Bạn AI đang tạm bận.</b><br><br>" +
-      "Nếu bé thấy thông báo này, người lớn có thể dán một chìa khóa (API key) riêng để dùng tiếp:<br><br>" +
-      "1. Mở <code>openrouter.ai</code> → đăng ký bằng Google<br>" +
-      "2. Vào <code>openrouter.ai/keys</code> → <b>Create Key</b><br>" +
-      "3. Copy chuỗi key (bắt đầu bằng <code>sk-or-v1-...</code>) rồi dán vào ô dưới<br><br>" +
-      "🔒 Key chỉ lưu trong <b>trình duyệt này</b>, không gửi đi đâu ngoài OpenRouter.";
-    const input = el("input");
-    input.type = "password";
-    input.placeholder = "Dán API key vào đây (sk-or-v1-...)";
-    input.id = "chatKeyInput";
-    const saveBtn = el("button", "btn green", "💾 Lưu và bắt đầu");
-    const note = el("div", "sub", "Dùng model miễn phí của OpenRouter — không mất phí.");
-    saveBtn.addEventListener("click", () => {
-      const v = input.value.trim();
-      if (!v) { note.textContent = "Bạn dán key vào ô trống đã nhé!"; return; }
-      chatSaveKey(v);
-      GAMES.chat.start();
-    });
-    input.addEventListener("keydown", e => {
-      if ((e.key || "") === "Enter") saveBtn.click();
-    });
+      "<b>🤖 Hermes chưa được bật.</b><br><br>" +
+      "Trò chuyện với AI cần Hermes của bạn đang chạy trên máy này. Người lớn làm 1 lần:<br><br>" +
+      "1. Chạy file <b>Bat-Hermes.bat</b> (nằm cùng thư mục với trò chơi)<br>" +
+      "2. Đợi cửa sổ đen hiện chữ <i>\"Cau noi chay tai: http://127.0.0.1:8646\"</i><br>" +
+      "3. Quay lại đây, bấm nút bên dưới<br><br>" +
+      "💡 Không cần API key — Hermes dùng đăng ký Portal của bạn.";
+    const retryBtn = el("button", "btn green", "🔄 Thử lại");
+    retryBtn.addEventListener("click", () => GAMES.chat.start());
+    const note = el("div", "sub", "Nếu vẫn không được, kiểm tra cửa sổ đen của Hermes còn mở không.");
     const actions = el("div", "actions");
-    actions.appendChild(saveBtn);
-    [box, input, note, actions].forEach(n => wrap.appendChild(n));
+    actions.appendChild(retryBtn);
+    [box, note, actions].forEach(n => wrap.appendChild(n));
     ctx.body.appendChild(wrap);
-    if (ctx.prog) ctx.prog.textContent = "Cần API key";
+    if (ctx.prog) ctx.prog.textContent = "Cần bật Hermes";
     if (ctx.score) ctx.score.textContent = "💬 Chat AI";
   },
 
@@ -1370,16 +1339,21 @@ GAMES.chat = {
         "7. Never use more than 3 sentences total.";
     }
 
-    // Goi OpenRouter 1 lan. payload co the them reasoning de tat che do suy luan.
+    // Goi cau noi (bridge.py) chay tren may ban -> hermes proxy -> Portal. Khong can API key.
     async function callAI(payload) {
-      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Authorization": "Bearer " + chatKey,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(payload)
-      });
+      let res;
+      try {
+        res = await fetch(BRIDGE_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+      } catch (netErr) {
+        // fetch that bai = cau noi chua bat -> bao ro cho nguoi lon
+        const e = new Error("BRIDGE_OFFLINE");
+        e.cause = netErr;
+        throw e;
+      }
       if (!res.ok) {
         const errText = await res.text();
         throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
@@ -1433,14 +1407,13 @@ GAMES.chat = {
         }
       } catch (err) {
         removeTyping();
-        let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
         const s = String(err && err.message ? err.message : err);
-        const keyBroken = s.indexOf("401") !== -1 || s.indexOf("402") !== -1 || s.indexOf("403") !== -1;
-        if (keyBroken) {
-          // Key nhung san het han / het tien -> hien man du phong de nguoi lon dan key rieng
+        // Cau noi chua bat -> hien huong dan bat Hermes cho nguoi lon
+        if (s.indexOf("BRIDGE_OFFLINE") !== -1) {
           GAMES.chat.renderSetup(ctx);
           return;
         }
+        let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
         if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
         else if (s.indexOf("404") !== -1) msg = "Model này đang bận. Bé bấm 🤖 Đổi model chọn model khác nhé! 🔄";
         else if (s.indexOf("5") === 0) msg = "Bạn AI đang bận một chút. Bé thử lại sau vài giây nhé! ⏳";

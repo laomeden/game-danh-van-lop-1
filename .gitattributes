@@ -1,0 +1,3 @@
+*.bat text eol=crlf
+*.html text
+*.py text
