@@ -1246,29 +1246,67 @@ GAMES.match = {
 };
 
 /* ---------- 7. Nói chuyện với AI ---------- */
-// ===== CHE DO HERMES: app goi cau noi (bridge.py) chay tren may ban =====
-// Khong can API key. Cau noi chuyen tiep den 'hermes proxy' -> dung subscription Portal cua ban.
-// De bat: chay file "Bat-Hermes.bat" (noi cung thu muc) truoc khi be vao tro choi.
-const BRIDGE_URL = "http://127.0.0.1:8646/chat";
-// Danh sach model FREE qua Portal — chi gom model da kiem tra tra loi dung format
-const CHAT_MODELS = [
-  {id:"upstage/solar-mini4:free",            n:"Solar Mini 4 (Upstage)",   d:"Nhẹ, nhanh — mặc định"},
-  {id:"poolside/laguna-s-2.1:free",          n:"Laguna S 2.1 (Poolside)",  d:"Vui vẻ, hợp với bé"},
-  {id:"meituan/longcat-2.5-preview:free",    n:"LongCat 2.5 (Meituan)",    d:"Câu dài, hay kể chuyện"}
+// ===== 2 BACKEND AI: thu Hermes truoc (mien phi), khong duoc thi dung Cloud =====
+// BE O NHA : app -> bridge.py (localhost) -> hermes proxy -> Portal cua ban. Mien phi.
+// NGUOI LA: app -> Cloudflare Worker -> OpenRouter. Cung mien phi (model :free).
+// App tu chuyen doi, be khong can lam gi.
+
+// >>> SAU KHI DAT WORKER LEN CLOUDFLARE, THAY DUONG DAN DUOI BANG CUA BAN <<<
+// Vi du: "https://be-hoc-tieng-anh.ten-ban.workers.dev/chat"
+const CLOUD_URL = "";   // <<< DIEN DUONG DAN WORKER VAO DAY
+
+const BACKENDS = [
+  {
+    id: "hermes",
+    label: "Hermes",
+    url: "http://127.0.0.1:8646/chat",
+    models: [
+      {id:"upstage/solar-mini4:free",            n:"Solar Mini 4 (Upstage)",  d:"Nhẹ, nhanh — mặc định"},
+      {id:"poolside/laguna-s-2.1:free",          n:"Laguna S 2.1 (Poolside)", d:"Vui vẻ, hợp với bé"},
+      {id:"meituan/longcat-2.5-preview:free",    n:"LongCat 2.5 (Meituan)",   d:"Câu dài, hay kể chuyện"}
+    ]
+  },
+  {
+    id: "cloud",
+    label: "Cloud",
+    url: CLOUD_URL,
+    models: [
+      {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định trên mạng"},
+      {id:"google/gemma-4-31b-it:free",                         n:"Gemma 4 31B (Google)",          d:"Nói tự nhiên, thân thiện"},
+      {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"}
+    ]
+  }
 ];
+let activeBackend = 0;                       // 0 = Hermes (thu truoc), 1 = Cloud
+let CHAT_MODELS = BACKENDS[activeBackend].models;   // model cua backend dang dung
 const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
 let chatModel = CHAT_DEFAULT_MODEL;
+let chatModelSlot = 0;                        // 0/1/2 — giu lua chon cua be khi doi backend
+
+function backendReady(i) {
+  const b = BACKENDS[i];
+  return !!(b && b.url);
+}
+function backendLabel(i) {
+  return BACKENDS[i] ? BACKENDS[i].label : "?";
+}
 function chatLoadModel() {
   try {
     const v = window.localStorage ? localStorage.getItem("behoc_chat_model") : null;
-    if (v && CHAT_MODELS.some(m => m.id === v)) chatModel = v;
+    const slot = Number(v);
+    if (slot >= 0 && slot <= 2) {
+      chatModelSlot = slot;
+      chatModel = CHAT_MODELS[slot].id;
+    }
   } catch (e) {}
   return chatModel;
 }
 function chatSaveModel(id) {
-  if (!CHAT_MODELS.some(m => m.id === id)) return;
+  const idx = CHAT_MODELS.findIndex(m => m.id === id);
+  if (idx === -1) return;
+  chatModelSlot = idx;
   chatModel = id;
-  try { if (window.localStorage) localStorage.setItem("behoc_chat_model", id); } catch (e) {}
+  try { if (window.localStorage) localStorage.setItem("behoc_chat_model", String(idx)); } catch (e) {}
 }
 const CHAT_TOPICS = [
   {en:"Hello! My name is Minh.", vi:"Xin chào! Tên mình là Minh."},
@@ -1310,32 +1348,43 @@ GAMES.chat = {
     this.renderChat(ctx);
   },
 
-  // Hien khi cau noi Hermes chua bat. Khong can API key — chi can bat Hermes.
+  // Hien khi CA 2 backend deu khong ket noi duoc (Hermes tat VA Cloud chua dat).
   renderSetup: function (ctx) {
     const wrap = el("div", "chatWrap");
     const box = el("div", "setupBox");
+    const coCloud = backendReady(1);
     box.innerHTML =
-      "<b>🤖 Hermes chưa được bật.</b><br><br>" +
-      "Trò chuyện với AI cần Hermes của bạn đang chạy trên máy này. Người lớn làm 1 lần:<br><br>" +
-      "1. Chạy file <b>Bat-Hermes.bat</b> (nằm cùng thư mục với trò chơi)<br>" +
-      "2. Đợi cửa sổ đen hiện chữ <i>\"Cau noi chay tai: http://127.0.0.1:8646\"</i><br>" +
-      "3. Quay lại đây, bấm nút bên dưới<br><br>" +
-      "💡 Không cần API key — Hermes dùng đăng ký Portal của bạn.";
+      "<b>🤖 Chưa kết nối được với AI.</b><br><br>" +
+      (coCloud
+        ? "Đang có sự cố tạm thời với máy chủ AI. Bé thử lại sau ít phút nhé! ⏳"
+        : "Trò chuyện với AI cần cấu hình thêm. Người lớn làm theo 1 trong 2 cách:<br><br>" +
+          "<b>Cách 1 — dùng Hermes của bạn (miễn phí):</b><br>" +
+          "1. Chạy file <b>Bat-Hermes.bat</b> (cùng thư mục với trò chơi)<br>" +
+          "2. Đợi cửa sổ đen hiện chữ <i>Cau noi chay tai: http://127.0.0.1:8646</i><br>" +
+          "3. Quay lại đây, bấm nút bên dưới<br><br>" +
+          "<b>Cách 2 — cho mọi người dùng được qua mạng:</b><br>" +
+          "Đặt file <code>cloud-worker.js</code> lên Cloudflare Workers (xem hướng dẫn trong file),<br>" +
+          "rồi dán đường dẫn Worker vào dòng <code>CLOUD_URL</code> trong <code>index.html</code>.") +
+      "<br><br>💡 Không cần API key trong cả 2 cách.";
     const retryBtn = el("button", "btn green", "🔄 Thử lại");
     retryBtn.addEventListener("click", () => GAMES.chat.start());
-    const note = el("div", "sub", "Nếu vẫn không được, kiểm tra cửa sổ đen của Hermes còn mở không.");
+    const note = el("div", "sub", "6 trò chơi còn lại vẫn chơi được bình thường.");
     const actions = el("div", "actions");
     actions.appendChild(retryBtn);
     [box, note, actions].forEach(n => wrap.appendChild(n));
     ctx.body.appendChild(wrap);
-    if (ctx.prog) ctx.prog.textContent = "Cần bật Hermes";
+    if (ctx.prog) ctx.prog.textContent = "Chưa kết nối được AI";
     if (ctx.score) ctx.score.textContent = "💬 Chat AI";
   },
 
   renderModelPicker: function (ctx) {
     ctx.body.innerHTML = "";
     const wrap = el("div", "chatWrap");
-    const title = el("div", "sub", "🤖 Chọn model AI miễn phí — tất cả đều không mất phí");
+    const dangDung = backendReady(1) && activeBackend === 1
+      ? "☁️ Cloud (cho mọi người qua mạng)"
+      : "🏠 Hermes (máy bạn — miễn phí)";
+    const title = el("div", "sub",
+      "🤖 Chọn model AI miễn phí — đang dùng: " + dangDung);
     const list = el("div", "chatWrap");
     list.style.gap = "8px";
     CHAT_MODELS.forEach(m => {
@@ -1395,10 +1444,7 @@ GAMES.chat = {
     ctx.body.appendChild(wrap);
 
     if (ctx.prog) ctx.prog.textContent = "💬 Đang trò chuyện";
-    if (ctx.score) {
-      const m = CHAT_MODELS.find(x => x.id === chatModel);
-      ctx.score.textContent = "🤖 " + (m ? m.n : chatModel);
-    }
+    if (ctx.score) updateBackendBadge();
 
     // --- chuyen tu chuoi dang hoi thoai ---
     const history = [];           // {role, content}
@@ -1473,26 +1519,61 @@ GAMES.chat = {
       ].join("\n");
     }
 
-    // Goi cau noi (bridge.py) chay tren may ban -> hermes proxy -> Portal. Khong can API key.
-    async function callAI(payload) {
-      let res;
-      try {
-        res = await fetch(BRIDGE_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload)
-        });
-      } catch (netErr) {
-        // fetch that bai = cau noi chua bat -> bao ro cho nguoi lon
-        const e = new Error("BRIDGE_OFFLINE");
-        e.cause = netErr;
-        throw e;
+    // Goi AI: thu Hermes (localhost) truoc, khong duoc thi chuyen sang Cloud.
+    // CHI doi backend khi loi mang — neu model tra ve rong thi giu nguyen backend de retry.
+    // Moi backend co ten model rieng -> phai dung dung model cua backend dang goi.
+    async function callAI(basePayload) {
+      // danh sach backend se thu: backend dang dung truoc, roi backend kia (neu co)
+      const order = [activeBackend];
+      const other = 1 - activeBackend;
+      if (backendReady(other)) order.push(other);
+
+      let lastNetErr = null;
+      for (const bi of order) {
+        const url = BACKENDS[bi].url;
+        if (!url) continue;
+        // dung model cua backend NAY, van giu dung slot be da chon
+        const models = BACKENDS[bi].models;
+        const modelForBackend = models[chatModelSlot] ? models[chatModelSlot].id : models[0].id;
+        const payload = Object.assign({}, basePayload, { model: modelForBackend });
+        let res;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (netErr) {
+          lastNetErr = netErr;
+          continue;                      // thu backend tiep theo
+        }
+        // 502 = cau noi khong goi duoc hermes proxy -> cung coi nhu chuyen sang Cloud
+        if (res.status === 502) { lastNetErr = new Error("HTTP 502"); continue; }
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
+        }
+        // thanh cong -> ghi nho backend dang dung
+        if (bi !== activeBackend) {
+          activeBackend = bi;
+          CHAT_MODELS = models;
+          chatModel = modelForBackend;
+          updateBackendBadge();
+        }
+        return await res.json();
       }
-      if (!res.ok) {
-        const errText = await res.text();
-        throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
+      // khong backend nao chay duoc
+      const e = new Error("BRIDGE_OFFLINE");
+      e.cause = lastNetErr;
+      throw e;
+    }
+    // Hien dang dung AI nao tren thanh tren
+    function updateBackendBadge() {
+      if (ctx.score) {
+        const m = CHAT_MODELS.find(x => x.id === chatModel);
+        ctx.score.textContent = (backendReady(1) && activeBackend === 1 ? "☁️ " : "🏠 ") +
+          (m ? m.n : chatModel);
       }
-      return await res.json();
     }
     function pickContent(data) {
       const c = data && data.choices && data.choices[0] && data.choices[0].message
