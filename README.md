@@ -18,14 +18,10 @@ Webapp học tập cho bé lớp 1, dùng chung kho **108 từ vựng cơ bản*
 
 Trò này gọi API **OpenRouter** (chỉ dùng model `:free`) trực tiếp từ trình duyệt.
 
-**Cấu hình (làm 1 lần, chỉ cho người lớn):**
-- Mở `index.html`, vào trò 💬 → vào màn "cần API key" → dán key OpenRouter (dùng trường hợp key đã bị hỏng).
-- Model mặc định: **Nemotron 3 Nano Omni (NVIDIA)**, có thể đổi sang 7 model free khác trong trò chat.
-
-**Cách dùng với bé:**
-- Chỉ cần mở link, vào trò 💬 → nói chuyện. **Không cần** nhập key, không cần chọn model.
-- Key và model được nhúng (hardcode) vào file, lưu trong localStorage của trình duyệt.
-- ⚠️ File public trên GitHub Pages nên key chỉ bảo vệ bằng **chỉ dùng model free** và giới hạn ~$1.
+- **Model mặc định:** Nemotron 3 Nano Omni (NVIDIA), đổi được sang 7 model free khác bằng nút 🤖 Đổi model.
+- **Bé chỉ cần mở link → vào trò 💬 → nói chuyện.** Không cần nhập key, không cần chọn model.
+- Nếu model trả về rỗng (do "suy luận" ăn hết token), app **tự thử lại** với chế độ suy luận tắt; nếu vẫn rỗng thì nhắc bé đổi model.
+- Nếu key hết hạn/hết tiền, app hiện màn hình "Bạn AI đang tạm bận" để người lớn dán key riêng.
 
 ## Truy cập
 

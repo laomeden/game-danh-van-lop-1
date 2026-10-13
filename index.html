@@ -625,10 +625,12 @@ GAMES.spell = {
     function guess(ch) {
       if (locked) return;
       const q = queue[i];
-      if (ch === q.w[hidden]) {
+      // So sanh khong phan biet chu hoa/thuong (vi du tu "TV") de be luon choi duoc
+      const target = q.w[hidden];
+      if (ch.toLowerCase() === String(target).toLowerCase()) {
         locked = true;
         const box = letters.children[hidden];
-        box.classList.add("filled"); box.textContent = ch;
+        box.classList.add("filled"); box.textContent = target;   // hien dung chu hoa/thuong nhu tu goc
         Array.prototype.forEach.call(keyboard.querySelectorAll(".key"), k => k.disabled = true);
         meaning.textContent = q.w + " = " + q.m + " " + q.e;
         feedback.textContent = pick(PRAISE); feedback.style.color = "#0b7a53";
@@ -1368,35 +1370,63 @@ GAMES.chat = {
         "7. Never use more than 3 sentences total.";
     }
 
+    // Goi OpenRouter 1 lan. payload co the them reasoning de tat che do suy luan.
+    async function callAI(payload) {
+      const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Authorization": "Bearer " + chatKey,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
+      }
+      return await res.json();
+    }
+    function pickContent(data) {
+      const c = data && data.choices && data.choices[0] && data.choices[0].message
+        ? data.choices[0].message.content : "";
+      return c || "";
+    }
+    function pickFinish(data) {
+      return data && data.choices && data.choices[0] && data.choices[0].finish_reason
+        ? data.choices[0].finish_reason : "";
+    }
+
     async function askAI(userText) {
       history.push({ role: "user", content: userText });
       addTyping();
       busy = true;
       sendBtn.disabled = true;
+      const base = {
+        model: chatModel,
+        messages: [{ role: "system", content: systemPrompt() }].concat(history.slice(-10)),
+        temperature: 0.7,
+        max_tokens: 900
+      };
       try {
-        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-          method: "POST",
-          headers: {
-            "Authorization": "Bearer " + chatKey,
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            model: chatModel,
-            messages: [{ role: "system", content: systemPrompt() }].concat(history.slice(-10)),
-            temperature: 0.7,
-            max_tokens: 220
-          })
-        });
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
+        // Lan 1: binh thuong. Neu model suy luan an het token -> content rong.
+        let data = await callAI(base);
+        let raw = pickContent(data);
+        let finish = pickFinish(data);
+        // Lan 2 (neu rong): thu lai voi che do suy luan TAT.
+        if (!raw) {
+          try {
+            data = await callAI(Object.assign({}, base, { reasoning: { enabled: false } }));
+            raw = pickContent(data);
+            finish = pickFinish(data) || finish;
+          } catch (e2) { /* provider khong nhan tham so nay -> bo qua, giu ket qua lan 1 */ }
         }
-        const data = await res.json();
-        const raw = data && data.choices && data.choices[0] && data.choices[0].message
-          ? data.choices[0].message.content : "";
         removeTyping();
         if (!raw) {
-          addMsg("Bạn AI chưa trả lời được. Bé thử lại nhé! 🔄", "bot");
+          addMsg(
+            "Bạn AI chưa trả lời được lần này. Bé bấm 🤖 Đổi model chọn model khác (ví dụ Gemma 4 31B) rồi thử lại nhé! 🔄" +
+            (finish ? " (" + finish + ")" : ""),
+            "bot"
+          );
         } else {
           history.push({ role: "assistant", content: raw });
           renderBotReply(raw);
