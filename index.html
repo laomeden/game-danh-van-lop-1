@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Bé Học Tiếng Anh - 6 Trò Chơi</title>
+<title>Bé Học Tiếng Anh - 7 Trò Chơi</title>
 <style>
   * { box-sizing: border-box; }
   body {
@@ -24,6 +24,7 @@
   }
   .pill.ghost { cursor: pointer; border: 2px solid transparent; font-family: inherit; color: #4a3f35; }
   .pill.ghost:hover { border-color: #FFB84C; }
+  .pill.ghost.on { border-color: #06D6A0; background: #D8F5E3; }
   .progress { height: 12px; background: rgba(255,255,255,.8); border-radius: 999px; overflow: hidden; box-shadow: inset 0 1px 3px rgba(0,0,0,.08); }
   .bar { height: 100%; width: 0%; background: linear-gradient(90deg, #FFD166, #06D6A0); transition: width .35s ease; }
   .card {
@@ -142,6 +143,47 @@
   .chip.dragging { opacity: .5; }
   .chip.done { background: #D8F5E3; box-shadow: 0 3px 0 #4cc295; cursor: default; color: #065f46; }
 
+  /* ===== NOI CHUYEN VOI AI ===== */
+  .chatWrap { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+  .chatBox {
+    height: 340px; overflow-y: auto; padding: 12px; text-align: left;
+    background: #F7FBFF; border-radius: 18px; border: 2px solid #E3F0FA;
+    display: flex; flex-direction: column; gap: 8px;
+  }
+  .msg { max-width: 85%; padding: 9px 13px; border-radius: 16px; font-size: 16px; line-height: 1.45; word-wrap: break-word; }
+  .msg.bot { align-self: flex-start; background: #fff; border: 2px solid #D9EAF7; border-bottom-left-radius: 4px; }
+  .msg.kid { align-self: flex-end; background: #FFE9A8; border: 2px solid #F0CE72; border-bottom-right-radius: 4px; }
+  .msg .who { font-size: 11px; color: #9a8a78; display: block; margin-bottom: 2px; }
+  .msg.sys { align-self: center; background: #FFF3D6; border: 2px dashed #FFD166; font-size: 14px; text-align: center; max-width: 95%; }
+  .msg.typing { color: #8a7a68; font-style: italic; }
+  .chatInputRow { display: flex; gap: 8px; align-items: stretch; }
+  .chatInput {
+    flex: 1; font-family: inherit; font-size: 17px; padding: 11px 14px;
+    border-radius: 999px; border: 3px solid #FFD166; background: #fff; color: #4a3f35; outline: none;
+  }
+  .chatInput:focus { border-color: #06D6A0; }
+  .micBtn {
+    width: 48px; border: none; border-radius: 50%; background: #8ED8F8; color: #0b4a63;
+    font-size: 22px; cursor: pointer; box-shadow: 0 3px 0 #63b6dd; font-family: inherit;
+  }
+  .micBtn.listening { background: #FF6B6B; color: #fff; box-shadow: 0 3px 0 #d94b4b; animation: pulse 1s infinite; }
+  .micBtn:disabled { opacity: .35; cursor: not-allowed; box-shadow: none; }
+  .topicRow { display: flex; flex-wrap: wrap; gap: 7px; justify-content: center; }
+  .topicChip {
+    font-family: inherit; font-size: 14px; font-weight: 700; cursor: pointer;
+    border: 2px solid #8ED8F8; background: #fff; color: #0b4a63;
+    border-radius: 999px; padding: 7px 13px;
+  }
+  .topicChip:hover { background: #E8F6FF; }
+  .topicChip.vi { border-color: #FFD166; color: #6b4d00; }
+  .setupBox { text-align: left; font-size: 14px; color: #6b5a48; line-height: 1.6; }
+  .setupBox code { background: #F4F9FF; padding: 2px 6px; border-radius: 6px; font-size: 13px; }
+  .setupBox input {
+    width: 100%; font-family: inherit; font-size: 15px; padding: 10px 12px; margin-top: 6px;
+    border-radius: 12px; border: 3px solid #FFD166; background: #fff; color: #4a3f35; outline: none;
+  }
+  .setupBox input:focus { border-color: #06D6A0; }
+
   /* ===== KET QUA ===== */
   .stars { font-size: 44px; margin: 8px 0; }
   .roundlist { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin: 12px 0; }
@@ -176,10 +218,11 @@
 <body>
 <div class="app">
   <h1>🎈 Bé Học Tiếng Anh 🎈</h1>
-  <div class="sub">6 trò chơi vui với 108 từ vựng cơ bản — bé chọn trò mình thích nhé!</div>
+  <div class="sub">7 trò chơi vui với 108 từ vựng cơ bản — bé chọn trò mình thích nhé!</div>
   <div class="hud">
     <div class="pill ghost" id="homeBtn">🏠 Trang chủ</div>
     <div class="pill ghost" id="vocabBtnTop">📖 Ôn từ vựng</div>
+    <div class="pill ghost" id="viToggle">🇻🇳 Bật dịch tiếng Việt</div>
   </div>
 
   <!-- ============ MENU ============ -->
@@ -235,6 +278,14 @@
   <section id="screen-match" class="screen hidden card">
     <div class="gameHead"><button class="btn blue homeBack">🏠</button><span class="gtitle">🧩 Kéo từ vào hình</span></div>
     <div class="gdesc">Kéo (hoặc chạm) từ vào đúng hình tương ứng.</div>
+    <div class="hud"><div class="pill gProg"></div><div class="pill gScore"></div></div>
+    <div class="gameBody"></div>
+  </section>
+
+  <!-- ============ 7. NOI CHUYEN VOI AI ============ -->
+  <section id="screen-chat" class="screen hidden card">
+    <div class="gameHead"><button class="btn blue homeBack">🏠</button><span class="gtitle">💬 Nói chuyện tiếng Anh với Bạn AI</span></div>
+    <div class="gdesc">Bé trò chuyện tiếng Anh với bạn AI. Bé có thể gõ chữ hoặc bấm micro để nói!</div>
     <div class="hud"><div class="pill gProg"></div><div class="pill gScore"></div></div>
     <div class="gameBody"></div>
   </section>
@@ -398,7 +449,8 @@ const GAMES_META = [
   {id:"choose", e:"🖼️", t:"Nhìn hình chọn từ",  d:"Chọn từ tiếng Anh đúng cho hình"},
   {id:"memory", e:"🃏", t:"Lật thẻ tìm cặp",     d:"Tìm cặp hình và từ giống nhau"},
   {id:"robot",  e:"🤖", t:"Robot đoán chữ",      d:"Đoán cả từ bằng từng chữ cái"},
-  {id:"match",  e:"🧩", t:"Kéo từ vào hình",     d:"Kéo hoặc chạm từ khớp với hình"}
+  {id:"match",  e:"🧩", t:"Kéo từ vào hình",     d:"Kéo hoặc chạm từ khớp với hình"},
+  {id:"chat",   e:"💬", t:"Nói chuyện với AI",   d:"Trò chuyện tiếng Anh với bạn AI"}
 ];
 
 const PRAISE = ["Giỏi quá! 🎉", "Tuyệt vời! 🌟", "Đúng rồi! 👏", "Bé thông minh quá! 💖", "Xuất sắc! 🥳"];
@@ -1083,6 +1135,300 @@ GAMES.match = {
   }
 };
 
+/* ---------- 7. Nói chuyện với AI ---------- */
+const CHAT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+const CHAT_TOPICS = [
+  {en:"Hello! My name is Minh.", vi:"Xin chào! Tên mình là Minh."},
+  {en:"I like apples.", vi:"Mình thích táo."},
+  {en:"I have a cat.", vi:"Mình có một con mèo."},
+  {en:"What is your name?", vi:"Tên bạn là gì?"},
+  {en:"I go to school.", vi:"Mình đi học."},
+  {en:"The sun is yellow.", vi:"Mặt trời màu vàng."},
+  {en:"I like red.", vi:"Mình thích màu đỏ."},
+  {en:"My mom is a teacher.", vi:"Mẹ mình là cô giáo."},
+  {en:"I can see a bird.", vi:"Mình nhìn thấy một con chim."},
+  {en:"Thank you!", vi:"Cảm ơn bạn!"},
+  {en:"Goodbye!", vi:"Tạm biệt!"},
+  {en:"I am hungry.", vi:"Mình đói rồi."}
+];
+let chatKey = null;
+function chatLoadKey() {
+  try { chatKey = window.localStorage ? localStorage.getItem("behoc_openrouter_key") : null; } catch (e) { chatKey = null; }
+  return chatKey;
+}
+function chatSaveKey(k) {
+  chatKey = k;
+  try { if (window.localStorage) localStorage.setItem("behoc_openrouter_key", k); } catch (e) {}
+}
+const VI_ON_KEY = "behoc_show_vi";
+let showVi = false;
+function viLoad() {
+  try { showVi = window.localStorage ? localStorage.getItem(VI_ON_KEY) === "1" : false; } catch (e) { showVi = false; }
+  const pill = $("#viToggle");
+  if (pill) {
+    pill.textContent = showVi ? "🇻🇳 Tắt dịch tiếng Việt" : "🇻🇳 Bật dịch tiếng Việt";
+    pill.classList.toggle("on", showVi);
+  }
+  return showVi;
+}
+function viToggle() {
+  showVi = !showVi;
+  try { if (window.localStorage) localStorage.setItem(VI_ON_KEY, showVi ? "1" : "0"); } catch (e) {}
+  viLoad();
+}
+
+GAMES.chat = {
+  start: function () {
+    const ctx = gameCtx("chat");
+    ctx.body.innerHTML = "";
+    chatLoadKey();
+
+    // Neu chua co key -> hien man huong dan nhap key
+    if (!chatKey) { this.renderSetup(ctx); return; }
+    this.renderChat(ctx);
+  },
+
+  renderSetup: function (ctx) {
+    const wrap = el("div", "chatWrap");
+    const box = el("div", "setupBox");
+    box.innerHTML =
+      "<b>💬 Trò chuyện với AI cần 1 chìa khóa (API key) miễn phí.</b><br><br>" +
+      "Cách lấy (làm 1 lần, mất ~2 phút):<br>" +
+      "1. Mở <code>openrouter.ai</code> → đăng ký bằng Google<br>" +
+      "2. Vào <code>openrouter.ai/keys</code> → <b>Create Key</b><br>" +
+      "3. Copy chuỗi key (bắt đầu bằng <code>sk-or-v1-...</code>) rồi dán vào ô dưới<br><br>" +
+      "🔒 Chìa khóa chỉ lưu trong <b>trình duyệt của bé</b> (localStorage), không gửi đi đâu ngoài OpenRouter. Bé không cần nhập lại lần sau.";
+    const input = el("input");
+    input.type = "password";
+    input.placeholder = "Dán API key vào đây (sk-or-v1-...)";
+    input.id = "chatKeyInput";
+    const saveBtn = el("button", "btn green", "💾 Lưu và bắt đầu");
+    const note = el("div", "sub", "Dùng model miễn phí của OpenRouter — không mất phí.");
+    saveBtn.addEventListener("click", () => {
+      const v = input.value.trim();
+      if (!v) { note.textContent = "Bé dán key vào ô trống đã nhé!"; return; }
+      chatSaveKey(v);
+      GAMES.chat.start();
+    });
+    input.addEventListener("keydown", e => {
+      if ((e.key || "") === "Enter") saveBtn.click();
+    });
+    const actions = el("div", "actions");
+    actions.appendChild(saveBtn);
+    [box, input, note, actions].forEach(n => wrap.appendChild(n));
+    ctx.body.appendChild(wrap);
+    if (ctx.prog) ctx.prog.textContent = "Cần API key";
+    if (ctx.score) ctx.score.textContent = "💬 Chat AI";
+  },
+
+  renderChat: function (ctx) {
+    const wrap = el("div", "chatWrap");
+    const chatBox = el("div", "chatBox");
+    chatBox.id = "chatBox";
+
+    const inputRow = el("div", "chatInputRow");
+    const input = el("input", "chatInput");
+    input.type = "text";
+    input.placeholder = "Gõ tiếng Anh vào đây... (ví dụ: I like apples)";
+    input.id = "chatInput";
+    const sendBtn = el("button", "btn green", "Gửi");
+    sendBtn.id = "chatSend";
+    const micBtn = el("button", "micBtn", "🎤");
+    micBtn.id = "chatMic";
+    inputRow.appendChild(input);
+    inputRow.appendChild(micBtn);
+    inputRow.appendChild(sendBtn);
+
+    const topicRow = el("div", "topicRow");
+    topicRow.id = "chatTopics";
+
+    const actions = el("div", "actions");
+    const clearBtn = el("button", "btn blue", "🧹 Xóa hội thoại");
+    const keyBtn = el("button", "btn", "🔑 Đổi key");
+    clearBtn.addEventListener("click", () => GAMES.chat.start());
+    keyBtn.addEventListener("click", () => {
+      chatSaveKey("");
+      GAMES.chat.start();
+    });
+    actions.appendChild(clearBtn);
+    actions.appendChild(keyBtn);
+
+    [chatBox, topicRow, inputRow, actions].forEach(n => wrap.appendChild(n));
+    ctx.body.appendChild(wrap);
+
+    if (ctx.prog) ctx.prog.textContent = "💬 Đang trò chuyện";
+    if (ctx.score) ctx.score.textContent = "🤖 Bạn AI";
+
+    // --- chuyen tu chuoi dang hoi thoai ---
+    const history = [];           // {role, content}
+    let busy = false;
+    let recog = null, listening = false;
+
+    // --- goi API ---
+    function addMsg(text, who, cls) {
+      const m = el("div", "msg " + (cls || who));
+      const name = el("span", "who", who === "bot" ? "🤖 Bạn AI" : who === "kid" ? "🧒 Bé" : "");
+      m.appendChild(name);
+      const body = el("span");
+      body.textContent = text;
+      m.appendChild(body);
+      chatBox.appendChild(m);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return m;
+    }
+    function addTyping() {
+      const m = el("div", "msg bot typing");
+      m.id = "chatTyping";
+      m.textContent = "Bạn AI đang nghĩ... 💭";
+      chatBox.appendChild(m);
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+    function removeTyping() {
+      const t = document.getElementById("chatTyping");
+      if (t) t.remove();
+    }
+
+    function systemPrompt() {
+      const vocabList = WORDS.map(x => x.w).join(", ");
+      return "You are a friendly English tutor chatting with a 6-year-old Vietnamese child who is learning English as a beginner (Grade 1 level). " +
+        "STRICT RULES:\n" +
+        "1. Speak ONLY in very simple English. Use short sentences (max 8 words).\n" +
+        "2. Use ONLY these vocabulary words when possible: " + vocabList + ". Also allowed: I, you, my, your, is, am, are, like, have, can, see, this, that, a, an, the, and, very, too, yes, no, please, thank you, hello, goodbye, what, who, where, how, good, big, small, one, two, three.\n" +
+        "3. ALWAYS reply with EXACTLY this format (3 parts, each on its own line):\n" +
+        "ENGLISH: <your reply in simple English>\n" +
+        "VIETNAMESE: <bản dịch tiếng Việt của câu trả lời>\n" +
+        "QUESTION: <one short easy question back to the child in simple English>\n" +
+        "4. Be warm, cheerful and encouraging. Use emoji.\n" +
+        "5. If the child writes in Vietnamese, gently switch them back to English by replying in English with a very simple example.\n" +
+        "6. Never discuss anything inappropriate for a child. Keep it about family, animals, food, school, colors, toys, nature.\n" +
+        "7. Never use more than 3 sentences total.";
+    }
+
+    async function askAI(userText) {
+      history.push({ role: "user", content: userText });
+      addTyping();
+      busy = true;
+      sendBtn.disabled = true;
+      try {
+        const res = await fetch("https://openrouter.ai/api/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Authorization": "Bearer " + chatKey,
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            model: CHAT_MODEL,
+            messages: [{ role: "system", content: systemPrompt() }].concat(history.slice(-10)),
+            temperature: 0.7,
+            max_tokens: 220
+          })
+        });
+        if (!res.ok) {
+          const errText = await res.text();
+          throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
+        }
+        const data = await res.json();
+        const raw = data && data.choices && data.choices[0] && data.choices[0].message
+          ? data.choices[0].message.content : "";
+        removeTyping();
+        if (!raw) {
+          addMsg("Bạn AI chưa trả lời được. Bé thử lại nhé! 🔄", "bot");
+        } else {
+          history.push({ role: "assistant", content: raw });
+          renderBotReply(raw);
+        }
+      } catch (err) {
+        removeTyping();
+        let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
+        const s = String(err && err.message ? err.message : err);
+        if (s.indexOf("401") !== -1) msg = "Chìa khóa (API key) không đúng. Bé bấm nút 🔑 Đổi key để nhập lại nhé!";
+        else if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
+        addMsg(msg, "bot");
+      }
+      busy = false;
+      sendBtn.disabled = false;
+    }
+
+    function renderBotReply(raw) {
+      // Tach 3 phan: ENGLISH / VIETNAMESE / QUESTION
+      const en = (raw.match(/ENGLISH:\s*([\s\S]*?)(?=VIETNAMESE:|QUESTION:|$)/i) || [])[1] || "";
+      const vi = (raw.match(/VIETNAMESE:\s*([\s\S]*?)(?=QUESTION:|$)/i) || [])[1] || "";
+      const qu = (raw.match(/QUESTION:\s*([\s\S]*?)$/i) || [])[1] || "";
+      const m = addMsg("", "bot");
+      const body = m.children[1];
+      body.textContent = en.trim() || raw;
+      if (showVi && vi.trim()) {
+        const v = el("div");
+        v.style.cssText = "margin-top:6px;padding-top:6px;border-top:1px dashed #D9EAF7;color:#8a7a68;font-size:14px;";
+        v.textContent = "🇻🇳 " + vi.trim();
+        m.appendChild(v);
+      }
+      if (qu.trim()) {
+        const q = el("div");
+        q.style.cssText = "margin-top:6px;padding-top:6px;border-top:1px dashed #D9EAF7;color:#0b4a63;font-size:14px;font-weight:700;";
+        q.textContent = "❓ " + qu.trim();
+        m.appendChild(q);
+      }
+      chatBox.scrollTop = chatBox.scrollHeight;
+      speak(en.trim() || raw);
+    }
+
+    function send() {
+      const v = input.value.trim();
+      if (!v || busy) return;
+      addMsg(v, "kid");
+      input.value = "";
+      askAI(v);
+    }
+
+    sendBtn.addEventListener("click", send);
+    input.addEventListener("keydown", e => {
+      if ((e.key || "") === "Enter") send();
+    });
+
+    // --- micro (nhan dang giong noi) ---
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) {
+      micBtn.disabled = true;
+      micBtn.title = "Trình duyệt này không hỗ trợ micro";
+    } else {
+      micBtn.addEventListener("click", () => {
+        if (listening) { try { recog.stop(); } catch (e) {} return; }
+        recog = new SR();
+        recog.lang = "en-US";
+        recog.interimResults = false;
+        recog.maxAlternatives = 1;
+        recog.onstart = () => { listening = true; micBtn.classList.add("listening"); };
+        recog.onend = () => { listening = false; micBtn.classList.remove("listening"); };
+        recog.onerror = () => { listening = false; micBtn.classList.remove("listening"); };
+        recog.onresult = e2 => {
+          const t = e2.results && e2.results[0] && e2.results[0][0] ? e2.results[0][0].transcript : "";
+          if (t) { input.value = t; send(); }
+        };
+        try { recog.start(); } catch (e) {}
+      });
+    }
+
+    // --- chu de goi y ---
+    CHAT_TOPICS.forEach(t => {
+      const c = el("button", "topicChip", t.en);
+      c.title = t.vi;
+      c.addEventListener("click", () => {
+        if (busy) return;
+        addMsg(t.en, "kid");
+        askAI(t.en);
+      });
+      topicRow.appendChild(c);
+    });
+
+    // --- loi chao dau ---
+    const greet = "Hello! I am your friend. What is your name?";
+    addMsg(greet, "bot");
+    history.push({ role: "assistant", content: "ENGLISH: " + greet + "\nVIETNAMESE: Xin chào! Mình là bạn của bé. Tên bé là gì?\nQUESTION: What is your name?" });
+    speak(greet);
+  }
+};
+
 /* ---------- Từ vựng ---------- */
 function buildVocab() {
   $("#vocabCount").textContent = "Tổng cộng " + WORDS.length + " từ cơ bản cho bé lớp 1";
@@ -1124,8 +1470,11 @@ document.addEventListener("click", e => {
 });
 $("#homeBtn").addEventListener("click", goHome);
 $("#vocabBtnTop").addEventListener("click", showVocab);
+$("#viToggle").addEventListener("click", viToggle);
 $("#resultHome").addEventListener("click", goHome);
 $("#resultReplay").addEventListener("click", () => { if (currentGame) startGame(currentGame); });
+
+viLoad();
 
 // Ban phim may tinh cho tro danh van / robot
 document.addEventListener("keydown", e => {
