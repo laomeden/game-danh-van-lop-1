@@ -1136,6 +1136,11 @@ GAMES.match = {
 };
 
 /* ---------- 7. Nói chuyện với AI ---------- */
+// ===== KEY VA MODEL MAC DINH (nhung san -> be khong can nhap gi) =====
+// LUU Y: file nay dang public tren GitHub Pages nen bat ky ai cung xem duoc key ben duoi.
+// Key co gioi han chi $1 va chi dung duoc model :free nen rui ro tai chinh la toi da ~$1.
+// Neu muon thu key lai: vao openrouter.ai/keys -> xoa key nay -> tao key moi -> sua dong duoi.
+const CHAT_API_KEY = "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";
 // Danh sach model FREE cua OpenRouter phu hop cho be lop 1 (chat don gian)
 const CHAT_MODELS = [
   {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định"},
@@ -1146,7 +1151,8 @@ const CHAT_MODELS = [
   {id:"liquid/lfm-2.5-2.6b:free",                          n:"LFM2.5-2.6B (LiquidAI)", d:"Nhỏ nhất, phù hợp máy yếu"},
   {id:"apodex/apodex-1.1-mini:free",                       n:"Apodex 1.1 Mini", d:"Nhẹ, ổn định"}
 ];
-let chatModel = CHAT_MODELS[0].id;
+const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
+let chatModel = CHAT_DEFAULT_MODEL;
 function chatLoadModel() {
   try {
     const v = window.localStorage ? localStorage.getItem("behoc_chat_model") : null;
@@ -1173,9 +1179,14 @@ const CHAT_TOPICS = [
   {en:"Goodbye!", vi:"Tạm biệt!"},
   {en:"I am hungry.", vi:"Mình đói rồi."}
 ];
-let chatKey = null;
+let chatKey = CHAT_API_KEY;   // da nhung san -> be khong can nhap key
 function chatLoadKey() {
-  try { chatKey = window.localStorage ? localStorage.getItem("behoc_openrouter_key") : null; } catch (e) { chatKey = null; }
+  // Neu nguoi dung tu nhap key rieng (qua man huong dan cu) thi uu tien key do
+  try {
+    const v = window.localStorage ? localStorage.getItem("behoc_openrouter_key") : null;
+    if (v && v.trim()) chatKey = v.trim();
+  } catch (e) {}
+  if (!chatKey) chatKey = CHAT_API_KEY;
   return chatKey;
 }
 function chatSaveKey(k) {
@@ -1205,22 +1216,22 @@ GAMES.chat = {
     ctx.body.innerHTML = "";
     chatLoadKey();
     chatLoadModel();
-
-    // Neu chua co key -> hien man huong dan nhap key
-    if (!chatKey) { this.renderSetup(ctx); return; }
+    // Da co key nhung san -> vao thang man tro chuyen, be khong can lam gi
     this.renderChat(ctx);
   },
 
+  // Du phong: chi hien khi key nhung san bi loi (het han / het luot).
+  // Nguoi lon co the dan key rieng cua minh vao day.
   renderSetup: function (ctx) {
     const wrap = el("div", "chatWrap");
     const box = el("div", "setupBox");
     box.innerHTML =
-      "<b>💬 Trò chuyện với AI cần 1 chìa khóa (API key) miễn phí.</b><br><br>" +
-      "Cách lấy (làm 1 lần, mất ~2 phút):<br>" +
+      "<b>💬 Bạn AI đang tạm bận.</b><br><br>" +
+      "Nếu bé thấy thông báo này, người lớn có thể dán một chìa khóa (API key) riêng để dùng tiếp:<br><br>" +
       "1. Mở <code>openrouter.ai</code> → đăng ký bằng Google<br>" +
       "2. Vào <code>openrouter.ai/keys</code> → <b>Create Key</b><br>" +
       "3. Copy chuỗi key (bắt đầu bằng <code>sk-or-v1-...</code>) rồi dán vào ô dưới<br><br>" +
-      "🔒 Chìa khóa chỉ lưu trong <b>trình duyệt của bé</b> (localStorage), không gửi đi đâu ngoài OpenRouter. Bé không cần nhập lại lần sau.";
+      "🔒 Key chỉ lưu trong <b>trình duyệt này</b>, không gửi đi đâu ngoài OpenRouter.";
     const input = el("input");
     input.type = "password";
     input.placeholder = "Dán API key vào đây (sk-or-v1-...)";
@@ -1229,7 +1240,7 @@ GAMES.chat = {
     const note = el("div", "sub", "Dùng model miễn phí của OpenRouter — không mất phí.");
     saveBtn.addEventListener("click", () => {
       const v = input.value.trim();
-      if (!v) { note.textContent = "Bé dán key vào ô trống đã nhé!"; return; }
+      if (!v) { note.textContent = "Bạn dán key vào ô trống đã nhé!"; return; }
       chatSaveKey(v);
       GAMES.chat.start();
     });
@@ -1297,17 +1308,11 @@ GAMES.chat = {
 
     const actions = el("div", "actions");
     const clearBtn = el("button", "btn blue", "🧹 Xóa hội thoại");
-    const keyBtn = el("button", "btn", "🔑 Đổi key");
     const modelBtn = el("button", "btn", "🤖 Đổi model");
     clearBtn.addEventListener("click", () => GAMES.chat.start());
-    keyBtn.addEventListener("click", () => {
-      chatSaveKey("");
-      GAMES.chat.start();
-    });
     modelBtn.addEventListener("click", () => this.renderModelPicker(ctx));
     actions.appendChild(clearBtn);
     actions.appendChild(modelBtn);
-    actions.appendChild(keyBtn);
 
     [chatBox, topicRow, inputRow, actions].forEach(n => wrap.appendChild(n));
     ctx.body.appendChild(wrap);
@@ -1400,8 +1405,15 @@ GAMES.chat = {
         removeTyping();
         let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
         const s = String(err && err.message ? err.message : err);
-        if (s.indexOf("401") !== -1) msg = "Chìa khóa (API key) không đúng. Bé bấm nút 🔑 Đổi key để nhập lại nhé!";
-        else if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
+        const keyBroken = s.indexOf("401") !== -1 || s.indexOf("402") !== -1 || s.indexOf("403") !== -1;
+        if (keyBroken) {
+          // Key nhung san het han / het tien -> hien man du phong de nguoi lon dan key rieng
+          GAMES.chat.renderSetup(ctx);
+          return;
+        }
+        if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
+        else if (s.indexOf("404") !== -1) msg = "Model này đang bận. Bé bấm 🤖 Đổi model chọn model khác nhé! 🔄";
+        else if (s.indexOf("5") === 0) msg = "Bạn AI đang bận một chút. Bé thử lại sau vài giây nhé! ⏳";
         addMsg(msg, "bot");
       }
       busy = false;
