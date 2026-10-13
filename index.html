@@ -1136,7 +1136,29 @@ GAMES.match = {
 };
 
 /* ---------- 7. Nói chuyện với AI ---------- */
-const CHAT_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+// Danh sach model FREE cua OpenRouter phu hop cho be lop 1 (chat don gian)
+const CHAT_MODELS = [
+  {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định"},
+  {id:"nvidia/nemotron-3.5-lightning:free",                n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"},
+  {id:"nvidia/nemotron-3-super-120b-a12b:free",            n:"Nemotron 3 Super (NVIDIA)", d:"Khỏe hơn, câu hay hơn"},
+  {id:"google/gemma-4-31b-it:free",                        n:"Gemma 4 31B (Google)", d:"Nói tự nhiên, thân thiện"},
+  {id:"google/gemma-4-26b-a4b-it:free",                    n:"Gemma 4 26B (Google)", d:"Nhẹ hơn Gemma 31B"},
+  {id:"liquid/lfm-2.5-2.6b:free",                          n:"LFM2.5-2.6B (LiquidAI)", d:"Nhỏ nhất, phù hợp máy yếu"},
+  {id:"apodex/apodex-1.1-mini:free",                       n:"Apodex 1.1 Mini", d:"Nhẹ, ổn định"}
+];
+let chatModel = CHAT_MODELS[0].id;
+function chatLoadModel() {
+  try {
+    const v = window.localStorage ? localStorage.getItem("behoc_chat_model") : null;
+    if (v && CHAT_MODELS.some(m => m.id === v)) chatModel = v;
+  } catch (e) {}
+  return chatModel;
+}
+function chatSaveModel(id) {
+  if (!CHAT_MODELS.some(m => m.id === id)) return;
+  chatModel = id;
+  try { if (window.localStorage) localStorage.setItem("behoc_chat_model", id); } catch (e) {}
+}
 const CHAT_TOPICS = [
   {en:"Hello! My name is Minh.", vi:"Xin chào! Tên mình là Minh."},
   {en:"I like apples.", vi:"Mình thích táo."},
@@ -1182,6 +1204,7 @@ GAMES.chat = {
     const ctx = gameCtx("chat");
     ctx.body.innerHTML = "";
     chatLoadKey();
+    chatLoadModel();
 
     // Neu chua co key -> hien man huong dan nhap key
     if (!chatKey) { this.renderSetup(ctx); return; }
@@ -1221,6 +1244,36 @@ GAMES.chat = {
     if (ctx.score) ctx.score.textContent = "💬 Chat AI";
   },
 
+  renderModelPicker: function (ctx) {
+    ctx.body.innerHTML = "";
+    const wrap = el("div", "chatWrap");
+    const title = el("div", "sub", "🤖 Chọn model AI miễn phí — tất cả đều không mất phí");
+    const list = el("div", "chatWrap");
+    list.style.gap = "8px";
+    CHAT_MODELS.forEach(m => {
+      const b = el("button", "topicChip", m.n);
+      b.style.cssText = "width:100%;text-align:left;padding:11px 14px;";
+      b.dataset.model = m.id;
+      if (m.id === chatModel) b.classList.add("sel");
+      const line = el("div");
+      line.style.cssText = "font-size:12px;font-weight:400;color:#8a7a68;margin-top:3px;";
+      line.textContent = (m.id === chatModel ? "✅ Đang dùng — " : "") + m.d;
+      b.appendChild(line);
+      b.addEventListener("click", () => {
+        chatSaveModel(m.id);
+        GAMES.chat.start();
+      });
+      list.appendChild(b);
+    });
+    const back = el("button", "btn green", "⬅️ Quay lại nói chuyện");
+    back.addEventListener("click", () => this.renderChat(ctx));
+    const actions = el("div", "actions");
+    actions.appendChild(back);
+    [title, list, actions].forEach(n => wrap.appendChild(n));
+    ctx.body.appendChild(wrap);
+    if (ctx.prog) ctx.prog.textContent = "🤖 Chọn model";
+  },
+
   renderChat: function (ctx) {
     const wrap = el("div", "chatWrap");
     const chatBox = el("div", "chatBox");
@@ -1245,19 +1298,25 @@ GAMES.chat = {
     const actions = el("div", "actions");
     const clearBtn = el("button", "btn blue", "🧹 Xóa hội thoại");
     const keyBtn = el("button", "btn", "🔑 Đổi key");
+    const modelBtn = el("button", "btn", "🤖 Đổi model");
     clearBtn.addEventListener("click", () => GAMES.chat.start());
     keyBtn.addEventListener("click", () => {
       chatSaveKey("");
       GAMES.chat.start();
     });
+    modelBtn.addEventListener("click", () => this.renderModelPicker(ctx));
     actions.appendChild(clearBtn);
+    actions.appendChild(modelBtn);
     actions.appendChild(keyBtn);
 
     [chatBox, topicRow, inputRow, actions].forEach(n => wrap.appendChild(n));
     ctx.body.appendChild(wrap);
 
     if (ctx.prog) ctx.prog.textContent = "💬 Đang trò chuyện";
-    if (ctx.score) ctx.score.textContent = "🤖 Bạn AI";
+    if (ctx.score) {
+      const m = CHAT_MODELS.find(x => x.id === chatModel);
+      ctx.score.textContent = "🤖 " + (m ? m.n : chatModel);
+    }
 
     // --- chuyen tu chuoi dang hoi thoai ---
     const history = [];           // {role, content}
@@ -1317,7 +1376,7 @@ GAMES.chat = {
             "Content-Type": "application/json"
           },
           body: JSON.stringify({
-            model: CHAT_MODEL,
+            model: chatModel,
             messages: [{ role: "system", content: systemPrompt() }].concat(history.slice(-10)),
             temperature: 0.7,
             max_tokens: 220
