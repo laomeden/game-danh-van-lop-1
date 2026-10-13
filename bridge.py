@@ -29,6 +29,9 @@ class Handler(BaseHTTPRequestHandler):
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type")
+        # Chrome tu phien ban 92 chan trang HTTPS cong khai goi vao may rieng (Private Network Access).
+        # Header nay la "giay phep" de trang github.io (HTTPS) duoc goi cau noi localhost nay.
+        self.send_header("Access-Control-Allow-Private-Network", "true")
 
     def do_OPTIONS(self):
         self.send_response(204)
