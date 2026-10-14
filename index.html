@@ -1362,53 +1362,37 @@ GAMES.match = {
 };
 
 /* ---------- 7. Nói chuyện với AI ---------- */
-// ===== 2 BACKEND AI: thu Hermes truoc (mien phi), khong duoc thi dung Cloud =====
-// BE O NHA : app -> bridge.py (localhost) -> hermes proxy -> Portal cua ban. Mien phi.
-// NGUOI LA: app -> Cloudflare Worker -> OpenRouter. Cung mien phi (model :free).
-// App tu chuyen doi, be khong can lam gi.
-
+// ===== CHI DUNG CLOUD: app -> Cloudflare Worker -> OpenRouter (NVIDIA free) =====
+// Khong con backend Hermes local. Moi nguoi mo link deu dung chung Worker.
 // >>> SAU KHI DAT WORKER LEN CLOUDFLARE, THAY DUONG DAN DUOI BANG CUA BAN <<<
-// Vi du: "https://be-hoc-tieng-anh.ten-ban.workers.dev/chat"
 const CLOUD_URL = "https://behoctienganh.manhtran9383.workers.dev";   // <<< DIEN DUONG DAN WORKER VAO DAY
 
+// CHI model NVIDIA mien phi tren OpenRouter (da kiem tra qua API /api/v1/models)
+// Da bo: Content Safety (model kiem duet, khong phai model tro chuyen)
 const BACKENDS = [
-  {
-    id: "hermes",
-    label: "Hermes",
-    url: "http://127.0.0.1:8646/chat",
-    models: [
-      {id:"upstage/solar-mini4:free",            n:"Solar Mini 4 (Upstage)",  d:"Nhẹ, nhanh — mặc định"},
-      {id:"poolside/laguna-s-2.1:free",          n:"Laguna S 2.1 (Poolside)", d:"Vui vẻ, hợp với bé"},
-      {id:"meituan/longcat-2.5-preview:free",    n:"LongCat 2.5 (Meituan)",   d:"Câu dài, hay kể chuyện"}
-    ]
-  },
   {
     id: "cloud",
     label: "Cloud",
     url: CLOUD_URL,
-    // CHI model NVIDIA mien phi tren OpenRouter (da kiem tra qua API /api/v1/models)
     models: [
-      {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định trên mạng"},
+      {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định"},
       {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh 1M"},
       {id:"nvidia/nemotron-3-super-120b-a12b:free",             n:"Nemotron 3 Super (NVIDIA)",       d:"120B, chính xác cao"},
       {id:"nvidia/nemotron-3-ultra-550b-a55b:free",             n:"Nemotron 3 Ultra (NVIDIA)",       d:"550B, mạnh nhất"}
     ]
   }
 ];
-let activeBackend = 0;                       // 0 = Hermes (thu truoc), 1 = Cloud
-let CHAT_MODELS = BACKENDS[activeBackend].models;   // model cua backend dang dung
+let activeBackend = 0;                       // chi con 1 backend: Cloud
+let CHAT_MODELS = BACKENDS[activeBackend].models;
 const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
 let chatModel = CHAT_DEFAULT_MODEL;
-let chatModelSlot = 0;                        // slot model be da chon (0-5)
+let chatModelSlot = 0;                        // slot model be da chon (0-3)
 // Lich su hoi thoai — giu o pham vi module de DOI MODEL khong mat cau chuyen
 let chatHistory = [];                         // {role, content}
 
 function backendReady(i) {
   const b = BACKENDS[i];
   return !!(b && b.url);
-}
-function backendLabel(i) {
-  return BACKENDS[i] ? BACKENDS[i].label : "?";
 }
 function chatLoadModel() {
   try {
@@ -1465,28 +1449,18 @@ GAMES.chat = {
     const ctx = gameCtx("chat");
     ctx.body.innerHTML = "";
     chatLoadModel();
-    // Che do Hermes: khong can key. Neu cau noi chua bat, lan goi dau se tu hien huong dan.
     this.renderChat(ctx);
   },
 
-  // Hien khi CA 2 backend deu khong ket noi duoc (Hermes tat VA Cloud chua dat).
+  // Hien khi Cloud Worker khong ket noi duoc (tat ca model NVIDIA deu loi).
   renderSetup: function (ctx) {
     const wrap = el("div", "chatWrap");
     const box = el("div", "setupBox");
-    const coCloud = backendReady(1);
     box.innerHTML =
       "<b>🤖 Chưa kết nối được với AI.</b><br><br>" +
-      (coCloud
-        ? "Đang có sự cố tạm thời với máy chủ AI. Bé thử lại sau ít phút nhé! ⏳"
-        : "Trò chuyện với AI cần cấu hình thêm. Người lớn làm theo 1 trong 2 cách:<br><br>" +
-          "<b>Cách 1 — dùng Hermes của bạn (miễn phí):</b><br>" +
-          "1. Chạy file <b>Bat-Hermes.bat</b> (cùng thư mục với trò chơi)<br>" +
-          "2. Đợi cửa sổ đen hiện chữ <i>Cau noi chay tai: http://127.0.0.1:8646</i><br>" +
-          "3. Quay lại đây, bấm nút bên dưới<br><br>" +
-          "<b>Cách 2 — cho mọi người dùng được qua mạng:</b><br>" +
-          "Đặt file <code>cloud-worker.js</code> lên Cloudflare Workers (xem hướng dẫn trong file),<br>" +
-          "rồi dán đường dẫn Worker vào dòng <code>CLOUD_URL</code> trong <code>index.html</code>.") +
-      "<br><br>💡 Không cần API key trong cả 2 cách.";
+      "Đang có sự cố tạm thời với máy chủ AI (có thể do hết lượt miễn phí trong ngày).<br>" +
+      "Bé thử lại sau ít phút nhé! ⏳<br><br>" +
+      "💡 Không cần API key — trò chơi dùng máy chủ miễn phí có sẵn.";
     const retryBtn = el("button", "btn green", "🔄 Thử lại");
     retryBtn.addEventListener("click", () => GAMES.chat.start());
     const note = el("div", "sub", "6 trò chơi còn lại vẫn chơi được bình thường.");
@@ -1501,11 +1475,8 @@ GAMES.chat = {
   renderModelPicker: function (ctx) {
     ctx.body.innerHTML = "";
     const wrap = el("div", "chatWrap");
-    const dangDung = backendReady(1) && activeBackend === 1
-      ? "☁️ Cloud (cho mọi người qua mạng)"
-      : "🏠 Hermes (máy bạn — miễn phí)";
     const title = el("div", "sub",
-      "🤖 Chọn model AI miễn phí — đang dùng: " + dangDung);
+      "🤖 Chọn model AI miễn phí (NVIDIA) — đang dùng: ☁️ Cloud");
     const list = el("div", "chatWrap");
     list.style.gap = "8px";
     CHAT_MODELS.forEach(m => {
@@ -1650,82 +1621,64 @@ GAMES.chat = {
       ].join("\n");
     }
 
-    // Goi AI: thu tung model cua backend dang dung. Model loi -> tu chuyen sang model khac.
+    // Goi AI qua Cloud Worker: thu tung model NVIDIA. Model loi -> tu chuyen sang model khac.
     // Chi bao loi khi TAT CA model deu khong chay duoc.
     async function callAI(basePayload) {
-      // Thu tat ca model cua backend dang dung, roi chuyen sang backend kia
-      const order = [activeBackend];
-      const other = 1 - activeBackend;
-      if (backendReady(other)) order.push(other);
+      const url = BACKENDS[0].url;
+      if (!url) {
+        const e = new Error("ALL_MODELS_FAILED");
+        e.cause = new Error("CLOUD_URL chua duoc dat");
+        throw e;
+      }
+      const models = BACKENDS[0].models;
+      // Thu model be da chon truoc, roi den cac model con lai
+      const modelOrder = [];
+      const chosen = models[chatModelSlot];
+      if (chosen) modelOrder.push(chosen);
+      models.forEach(m => { if (m !== chosen) modelOrder.push(m); });
 
       let lastErr = null;
-      const tried = [];
-
-      for (const bi of order) {
-        const url = BACKENDS[bi].url;
-        if (!url) continue;
-        const models = BACKENDS[bi].models;
-        // Thu model be da chon truoc, roi den cac model con lai
-        const modelOrder = [];
-        const chosen = models[chatModelSlot];
-        if (chosen) modelOrder.push(chosen);
-        models.forEach(m => { if (m !== chosen) modelOrder.push(m); });
-
-        for (const m of modelOrder) {
-          const payload = Object.assign({}, basePayload, { model: m.id });
-          let res;
-          try {
-            res = await fetch(url, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify(payload)
-            });
-          } catch (netErr) {
-            lastErr = netErr;
-            tried.push(m.n);
-            continue;                    // model nay khong goi duoc -> thu model khac
-          }
-          // 502/503/504 = provider tam thoi loi -> thu model khac
-          if (res.status === 502 || res.status === 503 || res.status === 504) {
-            lastErr = new Error("HTTP " + res.status);
-            tried.push(m.n);
-            continue;
-          }
-          // 429 = het luot mien phi cua model nay -> cung thu model khac
-          if (res.status === 429) {
-            lastErr = new Error("HTTP 429");
-            tried.push(m.n);
-            continue;
-          }
-          if (!res.ok) {
-            // 404 = worker khong co model nay; 500 = loi worker -> thu model khac
-            lastErr = new Error("HTTP " + res.status);
-            tried.push(m.n);
-            continue;
-          }
-          // THANH CONG -> ghi nho backend + model dang dung
-          if (bi !== activeBackend || m !== chosen) {
-            activeBackend = bi;
-            CHAT_MODELS = models;
-            chatModelSlot = models.indexOf(m);
-            chatModel = m.id;
-            updateBackendBadge();
-          }
-          return await res.json();
+      for (const m of modelOrder) {
+        const payload = Object.assign({}, basePayload, { model: m.id });
+        let res;
+        try {
+          res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+        } catch (netErr) {
+          lastErr = netErr;
+          continue;                    // model nay khong goi duoc -> thu model khac
         }
+        // 429/502/503/504 = provider tam thoi loi -> thu model khac
+        if (res.status === 429 || res.status === 502 || res.status === 503 || res.status === 504) {
+          lastErr = new Error("HTTP " + res.status);
+          continue;
+        }
+        if (!res.ok) {
+          // 404 = worker khong co model nay; 500 = loi worker -> thu model khac
+          lastErr = new Error("HTTP " + res.status);
+          continue;
+        }
+        // THANH CONG -> ghi nho model dang dung
+        if (m !== chosen) {
+          chatModelSlot = models.indexOf(m);
+          chatModel = m.id;
+          updateBackendBadge();
+        }
+        return await res.json();
       }
       // Khong model nao chay duoc
       const e = new Error("ALL_MODELS_FAILED");
       e.cause = lastErr;
-      e.triedModels = tried;
       throw e;
     }
-    // Hien dang dung AI nao tren thanh tren
+    // Hien dang dung model nao tren thanh tren
     function updateBackendBadge() {
       if (ctx.score) {
         const m = CHAT_MODELS.find(x => x.id === chatModel);
-        ctx.score.textContent = (backendReady(1) && activeBackend === 1 ? "☁️ " : "🏠 ") +
-          (m ? m.n : chatModel);
+        ctx.score.textContent = "☁️ " + (m ? m.n : chatModel);
       }
     }
     function pickContent(data) {
