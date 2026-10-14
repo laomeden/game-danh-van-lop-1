@@ -34,46 +34,6 @@ Cô Lily là **giáo viên**, không phải trợ lý ảo chung:
 
 Mỗi câu trả lời hiện 3 phần: **ENGLISH** (cô nói) / **VIETNAMESE** (bản dịch, bật/tắt được) / **QUESTION** (câu hỏi cho bé).
 
-## 🔌 Trò 💬 cần 1 trong 2 "cầu nối" — app tự chọn
-
-App thử cầu nối **Hermes trên máy bạn** trước (miễn phí qua đăng ký Portal). Không được thì tự chuyển sang **cầu nối Cloud** (cho người ngoài dùng qua mạng, cũng miễn phí). Bé không cần biết đang dùng cái nào — chỉ cần 1 trong 2 chạy là chat được.
-
-| Cầu nối | Ai dùng | Backend | Model mặc định |
-|---|---|---|---|
-| 🏠 Hermes (máy bạn) | bé ở nhà | bridge.py → hermes proxy → Portal | Solar Mini 4 |
-| ☁️ Cloud (mạng) | mọi người qua link | Cloudflare Worker → OpenRouter | Nemotron 3 Nano Omni |
-
-Cả 2 đều **không cần API key trong app**.
-
-### Cách 1 — Hermes trên máy bạn (dùng cho bé ở nhà)
-
-```
-trò chơi (trình duyệt)  →  bridge.py (localhost:8646)  →  hermes proxy (localhost:8645)  →  Portal
-```
-
-1. Tải `bridge.py` và `Bat-Hermes.bat` về **cùng thư mục với `index.html`**
-2. Bấm đúp **`Bat-Hermes.bat`**
-3. Đợi cửa sổ đen hiện `Cau noi chay tai: http://127.0.0.1:8646`
-4. **Bấm đúp mở `index.html`** (mở trực tiếp từ máy, không qua link github.io)
-
-**Giữ cửa sổ đen mở** trong khi bé chơi. Quên bật thì app hiện hướng dẫn tiếng Việt, bé không cần làm gì.
-
-> Lưu ý: nếu bé mở qua link `https://laomeden.github.io/...`, Chrome có thể chặn gọi localhost (chính sách Local Network Access). Mở file `index.html` trực tiếp thì không bị chặn.
-
-### Cách 2 — Cloudflare Worker (cho mọi người dùng qua link)
-
-Để **người khác** cũng chat được khi vào link github.io:
-
-1. Đăng ký Cloudflare (miễn phí) → **Workers & Pages** → **Create Worker**
-2. Xoá nội dung mẫu, dán toàn bộ `cloud-worker.js` → **Deploy**
-3. Vào **Settings → Variables** → thêm biến mật (secret):
-   - Tên: `OPENROUTER_KEY`
-   - Giá trị: key OpenRouter của bạn (tạo miễn phí tại openrouter.ai)
-4. Copy đường dẫn Worker (dạng `https://xxx.ten-ban.workers.dev`)
-5. Mở `index.html`, tìm dòng `const CLOUD_URL = "";` → dán đường dẫn vào giữa hai dấu nháy
-6. Commit + push lên repo → GitHub Pages tự build lại
-
-Miễn phí **100.000 request/ngày** — đủ cho hàng trăm bé. Worker giữ key trong biến mật, không ai đọc được từ source code.
 
 ### Model AI
 
