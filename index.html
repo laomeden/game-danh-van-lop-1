@@ -233,7 +233,7 @@
 <body>
 <div class="app">
   <h1>🎈 Bé Học Tiếng Anh 🎈</h1>
-  <div class="sub">7 trò chơi vui với 108 từ vựng cơ bản — bé chọn trò mình thích nhé!</div>
+  <div class="sub">7 trò chơi vui với 214 từ vựng cơ bản — bé chọn trò mình thích nhé!</div>
   <div class="hud">
     <div class="pill ghost" id="homeBtn">🏠 Trang chủ</div>
     <div class="pill ghost" id="vocabBtnTop">📖 Ôn từ vựng</div>
@@ -328,7 +328,7 @@
 </div>
 
 <script>
-// ===================== KHO TU VUNG (108 tu) =====================
+// ===================== KHO TU VUNG (214 tu) =====================
 const WORDS = [
   // Đồ ăn
   {w:"apple",   e:"🍎", m:"quả táo",       g:"food"},
@@ -348,7 +348,6 @@ const WORDS = [
   {w:"cat",     e:"🐱", m:"con mèo",       g:"animal"},
   {w:"dog",     e:"🐶", m:"con chó",       g:"animal"},
   {w:"bird",    e:"🐦", m:"con chim",      g:"animal"},
-  {w:"fish",    e:"🐟", m:"con cá",        g:"animal"},
   {w:"duck",    e:"🦆", m:"con vịt",       g:"animal"},
   {w:"cow",     e:"🐮", m:"con bò",        g:"animal"},
   {w:"pig",     e:"🐷", m:"con heo",       g:"animal"},
@@ -395,7 +394,6 @@ const WORDS = [
   {w:"bag",     e:"🎒", m:"cặp sách",      g:"school"},
   {w:"school",  e:"🏫", m:"trường học",    g:"school"},
   {w:"chair",   e:"🪑", m:"cái ghế",       g:"school"},
-  {w:"clock",   e:"⏰", m:"đồng hồ",       g:"school"},
   // Trong nhà
   {w:"house",   e:"🏠", m:"ngôi nhà",      g:"home"},
   {w:"door",    e:"🚪", m:"cánh cửa",      g:"home"},
@@ -414,7 +412,6 @@ const WORDS = [
   {w:"moon",    e:"🌙", m:"mặt trăng",     g:"nature"},
   {w:"star",    e:"⭐", m:"ngôi sao",      g:"nature"},
   {w:"tree",    e:"🌳", m:"cái cây",       g:"nature"},
-  {w:"flower",  e:"🌸", m:"bông hoa",      g:"nature"},
   {w:"leaf",    e:"🍃", m:"chiếc lá",      g:"nature"},
   {w:"rain",    e:"🌧️", m:"cơn mưa",     g:"nature"},
   {w:"snow",    e:"❄️", m:"tuyết",        g:"nature"},
@@ -448,7 +445,126 @@ const WORDS = [
   {w:"kite",    e:"🪁", m:"cái diều",      g:"toy"},
   {w:"guitar",  e:"🎸", m:"đàn guitar",    g:"toy"},
   {w:"piano",   e:"🎹", m:"đàn piano",     g:"toy"},
-  {w:"balloon", e:"🎈", m:"bóng bay",      g:"toy"}
+  {w:"balloon", e:"🎈", m:"bóng bay",      g:"toy"},
+  {w:"doll",    e:"🪆", m:"búp bê",        g:"toy"},
+  {w:"robot",   e:"🤖", m:"rô bốt",        g:"toy"},
+  {w:"puzzle",  e:"🧩", m:"trò ghép hình", g:"toy"},
+  {w:"teddy",   e:"🧸", m:"gấu bông",      g:"toy"},
+  {w:"drum",    e:"🥁", m:"cái trống",     g:"toy"},
+  // Đồ ăn thêm
+  {w:"juice",   e:"🧃", m:"nước ép",       g:"food"},
+  {w:"meat",    e:"🥩", m:"thịt",          g:"food"},
+  {w:"fish",    e:"🐟", m:"con cá",        g:"animal"},
+  {w:"soup",    e:"🍲", m:"súp",           g:"food"},
+  {w:"noodle",  e:"🍜", m:"mì",            g:"food"},
+  {w:"pizza",   e:"🍕", m:"bánh pizza",    g:"food"},
+  {w:"ice",     e:"🍦", m:"kem",           g:"food"},
+  {w:"honey",   e:"🍯", m:"mật ong",       g:"food"},
+  {w:"butter",  e:"🧈", m:"bơ",            g:"food"},
+  {w:"salt",    e:"🧂", m:"muối",          g:"food"},
+  {w:"pepper",  e:"🌶️", m:"ớt",           g:"food"},
+  {w:"tomato",  e:"🍅", m:"cà chua",       g:"food"},
+  {w:"carrot",  e:"🥕", m:"cà rốt",        g:"food"},
+  {w:"corn",    e:"🌽", m:"bắp ngô",       g:"food"},
+  {w:"potato",  e:"🥔", m:"khoai tây",     g:"food"},
+  {w:"onion",   e:"🧅", m:"củ hành",       g:"food"},
+  // Động vật thêm
+  {w:"fox",     e:"🦊", m:"con cáo",       g:"animal"},
+  {w:"wolf",    e:"🐺", m:"con sói",       g:"animal"},
+  {w:"deer",    e:"🦌", m:"con hươu",      g:"animal"},
+  {w:"camel",   e:"🐪", m:"lạc đà",        g:"animal"},
+  {w:"giraffe", e:"🦒", m:"hươu cao cổ",   g:"animal"},
+  {w:"zebra",   e:"🦓", m:"ngựa vằn",      g:"animal"},
+  {w:"penguin", e:"🐧", m:"chim cánh cụt", g:"animal"},
+  {w:"owl",     e:"🦉", m:"con cú",        g:"animal"},
+  {w:"eagle",   e:"🦅", m:"đại bàng",      g:"animal"},
+  {w:"parrot",  e:"🦜", m:"con vẹt",       g:"animal"},
+  {w:"butterfly",e:"🦋", m:"con bướm",     g:"animal"},
+  {w:"spider",  e:"🕷️", m:"con nhện",     g:"animal"},
+  {w:"ladybug", e:"🐞", m:"bọ rùa",        g:"animal"},
+  {w:"crab",    e:"🦀", m:"con cua",       g:"animal"},
+  {w:"shrimp",  e:"🦐", m:"con tôm",       g:"animal"},
+  {w:"octopus", e:"🐙", m:"con bạch tuộc", g:"animal"},
+  {w:"dolphin", e:"🐬", m:"cá heo",        g:"animal"},
+  {w:"shark",   e:"🦈", m:"cá mập",        g:"animal"},
+  // Cơ thể thêm
+  {w:"hair",    e:"💇", m:"tóc",           g:"body"},
+  {w:"face",    e:"😊", m:"khuôn mặt",     g:"body"},
+  {w:"tooth",   e:"🦷", m:"răng",          g:"body"},
+  {w:"arm",     e:"💪", m:"cánh tay",      g:"body"},
+  {w:"leg",     e:"🦵", m:"cái chân",      g:"body"},
+  {w:"finger",  e:"👆", m:"ngón tay",      g:"body"},
+  // Gia đình & nghề thêm
+  {w:"grandma", e:"👵", m:"bà",            g:"family"},
+  {w:"grandpa", e:"👴", m:"ông",           g:"family"},
+  {w:"sister",  e:"👭", m:"chị/em gái",    g:"family"},
+  {w:"brother", e:"👬", m:"anh/em trai",   g:"family"},
+  {w:"uncle",   e:"🧔", m:"chú/bác",       g:"family"},
+  {w:"aunt",    e:"👩‍🦱", m:"cô/dì",         g:"family"},
+  {w:"friend",  e:"🤝", m:"bạn bè",        g:"family"},
+  {w:"police",  e:"👮", m:"cảnh sát",      g:"family"},
+  {w:"farmer",  e:"👨‍🌾", m:"nông dân",  g:"family"},
+  {w:"cook",    e:"👨‍🍳", m:"đầu bếp",   g:"family"},
+  {w:"nurse",   e:"👩‍⚕️", m:"y tá",      g:"family"},
+  {w:"driver",  e:"🧑‍✈️", m:"tài xế",    g:"family"},
+  {w:"pilot",   e:"👨‍✈️", m:"phi công",  g:"family"},
+  // Trong nhà thêm
+  {w:"table",   e:"🍽️", m:"cái bàn",       g:"home"},
+  {w:"kitchen", e:"🍳", m:"nhà bếp",       g:"home"},
+  {w:"bathroom",e:"🚿", m:"phòng tắm",     g:"home"},
+  {w:"bedroom", e:"🛌", m:"phòng ngủ",    g:"home"},
+  {w:"garden",  e:"🌷", m:"khu vườn",      g:"home"},
+  {w:"fridge",  e:"🧊", m:"tủ lạnh",       g:"home"},
+  {w:"mirror",  e:"🪞", m:"cái gương",     g:"home"},
+  {w:"picture", e:"🖼️", m:"bức tranh",    g:"home"},
+  {w:"flower",  e:"🌸", m:"bông hoa",      g:"nature"},
+  {w:"clock",   e:"⏰", m:"đồng hồ",       g:"school"},
+  // Học tập thêm
+  {w:"paper",   e:"📄", m:"tờ giấy",       g:"school"},
+  {w:"crayon",  e:"🖍️", m:"bút sáp",      g:"school"},
+  {w:"eraser",  e:"🧽", m:"cục tẩy",       g:"school"},
+  {w:"notebook",e:"📓", m:"quyển vở",      g:"school"},
+  {w:"computer",e:"💻", m:"máy tính",      g:"school"},
+  {w:"glue",    e:"🧴", m:"keo dán",       g:"school"},
+  {w:"scissors",e:"✂️", m:"cái kéo",      g:"school"},
+  {w:"map",     e:"🗺️", m:"bản đồ",       g:"school"},
+  {w:"globe",   e:"🌍", m:"quả địa cầu",   g:"school"},
+  // Thiên nhiên thêm
+  {w:"sky",     e:"🌤️", m:"bầu trời",     g:"nature"},
+  {w:"wind",    e:"💨", m:"gió",           g:"nature"},
+  {w:"river",   e:"🏞️", m:"dòng sông",    g:"nature"},
+  {w:"forest",  e:"🌲", m:"khu rừng",      g:"nature"},
+  {w:"grass",   e:"🌿", m:"cỏ",            g:"nature"},
+  {w:"stone",   e:"🪨", m:"hòn đá",        g:"nature"},
+  {w:"sand",    e:"🏜️", m:"cát",          g:"nature"},
+  {w:"island",  e:"🏝️", m:"hòn đảo",      g:"nature"},
+  {w:"beach",   e:"🏖️", m:"bãi biển",     g:"nature"},
+  {w:"cave",    e:"🕳️", m:"hang động",    g:"nature"},
+  {w:"volcano", e:"🌋", m:"núi lửa",       g:"nature"},
+  // Phương tiện thêm
+  {w:"taxi",    e:"🚕", m:"xe taxi",       g:"transport"},
+  {w:"ship",    e:"🚢", m:"tàu thủy",      g:"transport"},
+  {w:"subway",  e:"🚇", m:"tàu điện ngầm",g:"transport"},
+  {w:"helicopter",e:"🚁", m:"trực thăng",  g:"transport"},
+  {w:"scooter", e:"🛴", m:"xe tay ga",     g:"transport"},
+  {w:"tractor", e:"🚜", m:"máy kéo",       g:"transport"},
+  {w:"ambulance",e:"🚑", m:"xe cứu thương",g:"transport"},
+  // Quần áo thêm
+  {w:"pants",   e:"👖", m:"quần dài",      g:"clothes"},
+  {w:"skirt",   e:"👚", m:"váy ngắn",      g:"clothes"},
+  {w:"coat",    e:"🧥", m:"áo khoác",      g:"clothes"},
+  {w:"glove",   e:"🧤", m:"găng tay",      g:"clothes"},
+  {w:"scarf",   e:"🧣", m:"khăn quàng",    g:"clothes"},
+  {w:"glasses", e:"👓", m:"kính mắt",      g:"clothes"},
+  {w:"boot",    e:"🥾", m:"ủng",           g:"clothes"},
+  {w:"pajamas", e:"🩱", m:"đồ ngủ",        g:"clothes"},
+  // Màu sắc thêm
+  {w:"purple",  e:"🟣", m:"màu tím",       g:"color"},
+  {w:"pink",    e:"🩷", m:"màu hồng",      g:"color"},
+  {w:"black",   e:"⚫", m:"màu đen",       g:"color"},
+  {w:"white",   e:"⚪", m:"màu trắng",     g:"color"},
+  {w:"brown",   e:"🟤", m:"màu nâu",       g:"color"},
+  {w:"gray",    e:"🩶", m:"màu xám",       g:"color"}
 ];
 
 const GROUP_NAMES = {
@@ -1482,13 +1598,15 @@ GAMES.chat = {
         "You are having a REAL conversation with the child, not giving a quiz. Talk like a kind teacher sitting next to them.",
         "",
         "HOW TO TALK:",
-        "- FIRST react to what the child just said, so they feel heard. Then add ONE small new thing.",
-        "- Then ask ONE easy question so the child wants to answer again.",
+        "- FIRST react naturally to what the child just said, like a real teacher would. Show you are listening.",
+        "- ALWAYS end your reply with a short, easy question so the child wants to keep talking.",
+        "- EXCEPTION: if the child says goodbye (bye, goodbye, see you) or thank you (thank you, thanks), do NOT ask a question. Just say goodbye or you are welcome warmly.",
         "- Never repeat the same sentence or the same question twice. Vary your words every turn.",
         "- Praise the child every time (Good job! / Well done! / You are great!).",
         "- If the child makes a mistake, never say wrong. Just say the correct sentence naturally so they hear it right.",
         "- If the child writes in Vietnamese, answer warmly in English and give them one easy English sentence to copy.",
         "- Keep the conversation going: follow the child's interest instead of changing the subject.",
+        "- Ask about the child's feelings, favorite things, what they did today, or what they want to do.",
         "",
         "LANGUAGE:",
         "- Very simple English only. Max 8 words per sentence, max 2 sentences.",
@@ -1503,7 +1621,7 @@ GAMES.chat = {
         "OUTPUT FORMAT - always exactly these 3 lines, nothing before or after:",
         "ENGLISH: <what Ms. Lily says to the child. A reaction or a statement. NEVER a question here>",
         "VIETNAMESE: <dịch câu tiếng Anh ở trên sang tiếng Việt>",
-        "QUESTION: <the ONLY question, one short easy question for the child, in English>",
+        "QUESTION: <the ONLY question, one short easy question for the child, in English. If the child said goodbye or thank you, write: NONE>",
         "",
         "EXAMPLE (copy this style exactly):",
         "child says: I like apples",
@@ -1515,7 +1633,13 @@ GAMES.chat = {
         "child says: con thích con mèo",
         "ENGLISH: Good try! In English we say: I like cats.",
         "VIETNAMESE: Bé giỏi lắm! Trong tiếng Anh mình nói: I like cats.",
-        "QUESTION: Do you have a cat at home?"
+        "QUESTION: Do you have a cat at home?",
+        "",
+        "EXAMPLE 3 (child says goodbye - no question):",
+        "child says: goodbye",
+        "ENGLISH: Goodbye! See you tomorrow!",
+        "VIETNAMESE: Tạm biệt! Hẹn gặp bé ngày mai!",
+        "QUESTION: NONE"
       ].join("\n");
     }
 
@@ -1642,7 +1766,9 @@ GAMES.chat = {
       // Tach 3 phan: ENGLISH / VIETNAMESE / QUESTION
       const en = (raw.match(/ENGLISH:\s*([\s\S]*?)(?=VIETNAMESE:|QUESTION:|$)/i) || [])[1] || "";
       const vi = (raw.match(/VIETNAMESE:\s*([\s\S]*?)(?=QUESTION:|$)/i) || [])[1] || "";
-      const qu = (raw.match(/QUESTION:\s*([\s\S]*?)$/i) || [])[1] || "";
+      let qu = (raw.match(/QUESTION:\s*([\s\S]*?)$/i) || [])[1] || "";
+      // Neu be chao tam biet hoac cam on -> Cô Lily khong hoi them
+      if (/^\s*(none|n\/a|không có|khong co|no question|-)\s*$/i.test(qu)) qu = "";
       const m = addMsg("", "bot");
       const body = m.children[1];
       body.textContent = en.trim() || raw;
