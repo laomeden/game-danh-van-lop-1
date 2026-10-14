@@ -1386,13 +1386,12 @@ const BACKENDS = [
     id: "cloud",
     label: "Cloud",
     url: CLOUD_URL,
+    // CHI model NVIDIA mien phi tren OpenRouter (da kiem tra qua API /api/v1/models)
     models: [
       {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định trên mạng"},
-      {id:"google/gemma-4-31b-it:free",                         n:"Gemma 4 31B (Google)",          d:"Nói tự nhiên, thân thiện"},
-      {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"},
-      {id:"meta-llama/llama-4-scout-17b-16e-instruct:free",     n:"Llama 4 Scout (Meta)",          d:"Thông minh, hiểu bé tốt"},
-      {id:"mistralai/mistral-small-3.2-24b-instruct:free",      n:"Mistral Small 3.2 (Mistral)",   d:"Nhẹ, ổn định"},
-      {id:"qwen/qwen3-30b-a3b:free",                            n:"Qwen 3 30B (Alibaba)",          d:"Đa ngôn ngữ, biết tiếng Việt"}
+      {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh 1M"},
+      {id:"nvidia/nemotron-3-super-120b-a12b:free",             n:"Nemotron 3 Super (NVIDIA)",       d:"120B, chính xác cao"},
+      {id:"nvidia/nemotron-3-ultra-550b-a55b:free",             n:"Nemotron 3 Ultra (NVIDIA)",       d:"550B, mạnh nhất"}
     ]
   }
 ];
@@ -1535,6 +1534,7 @@ GAMES.chat = {
   },
 
   renderChat: function (ctx) {
+    ctx.body.innerHTML = "";   // xoa man cu truoc khi ve lai (an toan: chi xoa rong, khong chen du lieu ngoai)
     const wrap = el("div", "chatWrap");
     const chatBox = el("div", "chatBox");
     chatBox.id = "chatBox";
