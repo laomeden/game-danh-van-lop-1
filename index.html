@@ -1401,6 +1401,8 @@ let CHAT_MODELS = BACKENDS[activeBackend].models;   // model cua backend dang du
 const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
 let chatModel = CHAT_DEFAULT_MODEL;
 let chatModelSlot = 0;                        // slot model be da chon (0-5)
+// Lich su hoi thoai — giu o pham vi module de DOI MODEL khong mat cau chuyen
+let chatHistory = [];                         // {role, content}
 
 function backendReady(i) {
   const b = BACKENDS[i];
@@ -1518,7 +1520,8 @@ GAMES.chat = {
       b.appendChild(line);
       b.addEventListener("click", () => {
         chatSaveModel(m.id);
-        GAMES.chat.start();
+        // Quay lai man chat, GIU NGUYEN lich su -> Co Lily nho cau chuyen truoc
+        this.renderChat(ctx);
       });
       list.appendChild(b);
     });
@@ -1555,7 +1558,7 @@ GAMES.chat = {
     const actions = el("div", "actions");
     const clearBtn = el("button", "btn blue", "🧹 Xóa hội thoại");
     const modelBtn = el("button", "btn", "🤖 Đổi model");
-    clearBtn.addEventListener("click", () => GAMES.chat.start());
+    clearBtn.addEventListener("click", () => { chatHistory.length = 0; GAMES.chat.start(); });
     modelBtn.addEventListener("click", () => this.renderModelPicker(ctx));
     actions.appendChild(clearBtn);
     actions.appendChild(modelBtn);
@@ -1566,8 +1569,8 @@ GAMES.chat = {
     if (ctx.prog) ctx.prog.textContent = "💬 Đang trò chuyện";
     if (ctx.score) updateBackendBadge();
 
-    // --- chuyen tu chuoi dang hoi thoai ---
-    const history = [];           // {role, content}
+    // --- chuyen tu chuoi dang hoi thoai (giu nguyen khi doi model) ---
+    const history = chatHistory;    // dung chung mang o pham vi ngoai -> doi model khong mat lich su
     let busy = false;
     let recog = null, listening = false;
 
@@ -1789,7 +1792,7 @@ GAMES.chat = {
       sendBtn.disabled = false;
     }
 
-    function renderBotReply(raw) {
+    function renderBotReply(raw, silent) {
       // Tach 3 phan: ENGLISH / VIETNAMESE / QUESTION
       const en = (raw.match(/ENGLISH:\s*([\s\S]*?)(?=VIETNAMESE:|QUESTION:|$)/i) || [])[1] || "";
       const vi = (raw.match(/VIETNAMESE:\s*([\s\S]*?)(?=QUESTION:|$)/i) || [])[1] || "";
@@ -1812,9 +1815,9 @@ GAMES.chat = {
         m.appendChild(q);
       }
       chatBox.scrollTop = chatBox.scrollHeight;
-      // Doc ca cau tra loi VA cau hoi goi y
+      // Doc ca cau tra loi VA cau hoi goi y (silent = true khi khoi phuc lich su)
       const fullSpeech = (en.trim() || raw) + (qu.trim() ? " " + qu.trim() : "");
-      speak(fullSpeech);
+      if (!silent) speak(fullSpeech);
     }
 
     function send() {
@@ -1865,11 +1868,20 @@ GAMES.chat = {
       topicRow.appendChild(c);
     });
 
-    // --- loi chao dau (Cô Lily) ---
-    const greet = "Hello! I am Ms. Lily. I am your English teacher. What is your name?";
-    addMsg(greet, "bot");
-    history.push({ role: "assistant", content: "ENGLISH: Hello! I am Ms. Lily. I am your English teacher.\nVIETNAMESE: Xin chào! Cô là cô Lily, giáo viên tiếng Anh của bé.\nQUESTION: What is your name?" });
-    speak(greet);
+    // --- khoi phuc hoi thoai cu (khi quay lai tu bo chon model) ---
+    // Neu lich su con tin nhan -> ve lai toan bo, khong chao lai tu dau
+    if (history.length > 0) {
+      history.forEach(h => {
+        if (h.role === "user") addMsg(h.content, "kid");
+        else if (h.role === "assistant" && h.content.indexOf("ENGLISH:") !== -1) renderBotReply(h.content, true);
+      });
+    } else {
+      // --- hoi thoai MOI: loi chao dau (Cô Lily) ---
+      const greet = "Hello! I am Ms. Lily. I am your English teacher. What is your name?";
+      addMsg(greet, "bot");
+      history.push({ role: "assistant", content: "ENGLISH: Hello! I am Ms. Lily. I am your English teacher.\nVIETNAMESE: Xin chào! Cô là cô Lily, giáo viên tiếng Anh của bé.\nQUESTION: What is your name?" });
+      speak(greet);
+    }
   }
 };
 
