@@ -1389,7 +1389,10 @@ const BACKENDS = [
     models: [
       {id:"nvidia/nemotron-3-nano-omni-30b-a3b-reasoning:free", n:"Nemotron 3 Nano Omni (NVIDIA)", d:"Nhẹ, nhanh — mặc định trên mạng"},
       {id:"google/gemma-4-31b-it:free",                         n:"Gemma 4 31B (Google)",          d:"Nói tự nhiên, thân thiện"},
-      {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"}
+      {id:"nvidia/nemotron-3.5-lightning:free",                 n:"Nemotron 3.5 Lightning (NVIDIA)", d:"Rất nhanh, ngữ cảnh lớn"},
+      {id:"meta-llama/llama-4-scout-17b-16e-instruct:free",     n:"Llama 4 Scout (Meta)",          d:"Thông minh, hiểu bé tốt"},
+      {id:"mistralai/mistral-small-3.2-24b-instruct:free",      n:"Mistral Small 3.2 (Mistral)",   d:"Nhẹ, ổn định"},
+      {id:"qwen/qwen3-30b-a3b:free",                            n:"Qwen 3 30B (Alibaba)",          d:"Đa ngôn ngữ, biết tiếng Việt"}
     ]
   }
 ];
@@ -1397,7 +1400,7 @@ let activeBackend = 0;                       // 0 = Hermes (thu truoc), 1 = Clou
 let CHAT_MODELS = BACKENDS[activeBackend].models;   // model cua backend dang dung
 const CHAT_DEFAULT_MODEL = CHAT_MODELS[0].id;
 let chatModel = CHAT_DEFAULT_MODEL;
-let chatModelSlot = 0;                        // 0/1/2 — giu lua chon cua be khi doi backend
+let chatModelSlot = 0;                        // slot model be da chon (0-5)
 
 function backendReady(i) {
   const b = BACKENDS[i];
@@ -1410,7 +1413,8 @@ function chatLoadModel() {
   try {
     const v = window.localStorage ? localStorage.getItem("behoc_chat_model") : null;
     const slot = Number(v);
-    if (slot >= 0 && slot <= 2) {
+    const max = CHAT_MODELS.length - 1;
+    if (slot >= 0 && slot <= max) {
       chatModelSlot = slot;
       chatModel = CHAT_MODELS[slot].id;
     }
@@ -1643,52 +1647,74 @@ GAMES.chat = {
       ].join("\n");
     }
 
-    // Goi AI: thu Hermes (localhost) truoc, khong duoc thi chuyen sang Cloud.
-    // CHI doi backend khi loi mang — neu model tra ve rong thi giu nguyen backend de retry.
-    // Moi backend co ten model rieng -> phai dung dung model cua backend dang goi.
+    // Goi AI: thu tung model cua backend dang dung. Model loi -> tu chuyen sang model khac.
+    // Chi bao loi khi TAT CA model deu khong chay duoc.
     async function callAI(basePayload) {
-      // danh sach backend se thu: backend dang dung truoc, roi backend kia (neu co)
+      // Thu tat ca model cua backend dang dung, roi chuyen sang backend kia
       const order = [activeBackend];
       const other = 1 - activeBackend;
       if (backendReady(other)) order.push(other);
 
-      let lastNetErr = null;
+      let lastErr = null;
+      const tried = [];
+
       for (const bi of order) {
         const url = BACKENDS[bi].url;
         if (!url) continue;
-        // dung model cua backend NAY, van giu dung slot be da chon
         const models = BACKENDS[bi].models;
-        const modelForBackend = models[chatModelSlot] ? models[chatModelSlot].id : models[0].id;
-        const payload = Object.assign({}, basePayload, { model: modelForBackend });
-        let res;
-        try {
-          res = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-        } catch (netErr) {
-          lastNetErr = netErr;
-          continue;                      // thu backend tiep theo
+        // Thu model be da chon truoc, roi den cac model con lai
+        const modelOrder = [];
+        const chosen = models[chatModelSlot];
+        if (chosen) modelOrder.push(chosen);
+        models.forEach(m => { if (m !== chosen) modelOrder.push(m); });
+
+        for (const m of modelOrder) {
+          const payload = Object.assign({}, basePayload, { model: m.id });
+          let res;
+          try {
+            res = await fetch(url, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(payload)
+            });
+          } catch (netErr) {
+            lastErr = netErr;
+            tried.push(m.n);
+            continue;                    // model nay khong goi duoc -> thu model khac
+          }
+          // 502/503/504 = provider tam thoi loi -> thu model khac
+          if (res.status === 502 || res.status === 503 || res.status === 504) {
+            lastErr = new Error("HTTP " + res.status);
+            tried.push(m.n);
+            continue;
+          }
+          // 429 = het luot mien phi cua model nay -> cung thu model khac
+          if (res.status === 429) {
+            lastErr = new Error("HTTP 429");
+            tried.push(m.n);
+            continue;
+          }
+          if (!res.ok) {
+            // 404 = worker khong co model nay; 500 = loi worker -> thu model khac
+            lastErr = new Error("HTTP " + res.status);
+            tried.push(m.n);
+            continue;
+          }
+          // THANH CONG -> ghi nho backend + model dang dung
+          if (bi !== activeBackend || m !== chosen) {
+            activeBackend = bi;
+            CHAT_MODELS = models;
+            chatModelSlot = models.indexOf(m);
+            chatModel = m.id;
+            updateBackendBadge();
+          }
+          return await res.json();
         }
-        // 502 = cau noi khong goi duoc hermes proxy -> cung coi nhu chuyen sang Cloud
-        if (res.status === 502) { lastNetErr = new Error("HTTP 502"); continue; }
-        if (!res.ok) {
-          const errText = await res.text();
-          throw new Error("HTTP " + res.status + ": " + errText.slice(0, 200));
-        }
-        // thanh cong -> ghi nho backend dang dung
-        if (bi !== activeBackend) {
-          activeBackend = bi;
-          CHAT_MODELS = models;
-          chatModel = modelForBackend;
-          updateBackendBadge();
-        }
-        return await res.json();
       }
-      // khong backend nao chay duoc
-      const e = new Error("BRIDGE_OFFLINE");
-      e.cause = lastNetErr;
+      // Khong model nao chay duoc
+      const e = new Error("ALL_MODELS_FAILED");
+      e.cause = lastErr;
+      e.triedModels = tried;
       throw e;
     }
     // Hien dang dung AI nao tren thanh tren
@@ -1747,16 +1773,17 @@ GAMES.chat = {
       } catch (err) {
         removeTyping();
         const s = String(err && err.message ? err.message : err);
-        // Cau noi chua bat -> hien huong dan bat Hermes cho nguoi lon
-        if (s.indexOf("BRIDGE_OFFLINE") !== -1) {
-          GAMES.chat.renderSetup(ctx);
+        // Tat ca model deu khong chay duoc -> moi bao cho be
+        if (s.indexOf("ALL_MODELS_FAILED") !== -1 || s.indexOf("BRIDGE_OFFLINE") !== -1) {
+          addMsg(
+            "Cô Lily đang nghỉ một chút. Bé thử lại sau vài phút nhé! ⏳",
+            "bot"
+          );
+          busy = false;
+          sendBtn.disabled = false;
           return;
         }
-        let msg = "Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡";
-        if (s.indexOf("429") !== -1) msg = "Hôm nay đã dùng hết lượt miễn phí. Bé thử lại vào ngày mai nhé! 😴";
-        else if (s.indexOf("404") !== -1) msg = "Model này đang bận. Bé bấm 🤖 Đổi model chọn model khác nhé! 🔄";
-        else if (s.indexOf("5") === 0) msg = "Cô Lily đang bận một chút. Bé thử lại sau vài giây nhé! ⏳";
-        addMsg(msg, "bot");
+        addMsg("Không kết nối được với AI. Bé kiểm tra mạng rồi thử lại nhé! 📡", "bot");
       }
       busy = false;
       sendBtn.disabled = false;
@@ -1785,7 +1812,9 @@ GAMES.chat = {
         m.appendChild(q);
       }
       chatBox.scrollTop = chatBox.scrollHeight;
-      speak(en.trim() || raw);
+      // Doc ca cau tra loi VA cau hoi goi y
+      const fullSpeech = (en.trim() || raw) + (qu.trim() ? " " + qu.trim() : "");
+      speak(fullSpeech);
     }
 
     function send() {
