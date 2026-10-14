@@ -1729,10 +1729,14 @@ GAMES.chat = {
       } catch (err) {
         removeTyping();
         const s = String(err && err.message ? err.message : err);
-        // Tat ca model deu khong chay duoc -> moi bao cho be
+        // Het luot mien phi trong ngay (429 o MOI model) -> bao ro cho be biet mai choi lai
         if (s.indexOf("ALL_MODELS_FAILED") !== -1 || s.indexOf("BRIDGE_OFFLINE") !== -1) {
+          const cause = err && err.cause ? String(err.cause.message || err.cause) : "";
+          const isQuota = cause.indexOf("429") !== -1 || cause.indexOf("Rate limit") !== -1;
           addMsg(
-            "Cô Lily đang nghỉ một chút. Bé thử lại sau vài phút nhé! ⏳",
+            isQuota
+              ? "Hôm nay cô Lily đã trò chuyện hết 50 câu miễn phí rồi! Bé nghỉ chơi, mai quay lại nhé! 😴🌙"
+              : "Cô Lily đang bận một chút. Bé thử lại sau vài phút nhé! ⏳",
             "bot"
           );
           busy = false;
